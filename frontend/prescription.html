@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Prescription | Medical Intelligence</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Prescription</h1>
+      <p>Upload a prescription to extract medicines</p>
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="prescription.html"><strong>Prescription</strong></a>
+        <a href="healthrisk.html">Health Risk</a>
+        <a href="diet.html">Diet Plan</a>
+      </nav>
+      <div class="nav-config">
+        <label for="apiBase">API base URL:</label>
+        <input id="apiBase" type="text" placeholder="http://127.0.0.1:8000" value="http://127.0.0.1:8000" />
+        <button id="saveBase">Save</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>Analyze Prescription</h2>
+        <form id="formPrescription">
+          <input type="file" name="file" accept="image/*,.pdf" required />
+          <button type="submit">Analyze</button>
+        </form>
+        <div id="viewPrescription" class="view hidden"></div>
+        <pre id="outPrescription" class="output"></pre>
+      </section>
+    </main>
+
+    <footer>
+      <small>Tip: Run your API with <code>uvicorn test.app:app --reload</code></small>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+  </html>
+
+
+

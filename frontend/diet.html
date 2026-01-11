@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Diet Plan | Medical Intelligence</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Diet Plan Generator</h1>
+      <p>Upload a lab report and fill patient details</p>
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="prescription.html">Prescription</a>
+        <a href="healthrisk.html">Health Risk</a>
+        <a href="diet.html"><strong>Diet Plan</strong></a>
+      </nav>
+      <div class="nav-config">
+        <label for="apiBase">API base URL:</label>
+        <input id="apiBase" type="text" placeholder="http://127.0.0.1:8000" value="http://127.0.0.1:8000" />
+        <button id="saveBase">Save</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>Generate Diet Plan</h2>
+        <form id="formDiet">
+          <div class="grid">
+            <label>Report file
+              <input type="file" name="file" accept="image/*,.pdf" required />
+            </label>
+            <label>Region/Cuisine
+              <input type="text" name="region" placeholder="South Indian" required />
+            </label>
+            <label>Condition
+              <input type="text" name="condition" placeholder="Type 2 Diabetes" required />
+            </label>
+            <label>Weight (kg)
+              <input type="number" step="0.1" name="weight" placeholder="70" required />
+            </label>
+            <label>Age
+              <input type="number" name="age" placeholder="45" required />
+            </label>
+          </div>
+          <button type="submit">Generate</button>
+        </form>
+        <div id="viewDiet" class="view hidden"></div>
+        <pre id="outDiet" class="output"></pre>
+      </section>
+    </main>
+
+    <footer>
+      <small>Tip: Run your API with <code>uvicorn test.app:app --reload</code></small>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+  </html>
+
+
+
