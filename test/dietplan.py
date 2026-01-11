@@ -1,163 +1,185 @@
 import pytesseract
 from PIL import Image
 from google import genai
+from google.genai import types
 import json
 import os
+import sys
 
-# --- Tesseract Config ---
-pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'  # Windows path
+# --- Configuration & Initialization ---
 
-# --- Initialize Gemini ---
-api_key = os.getenv('GEMINI_API_KEY', 'AIzaSyC_kAvA09PcJmp2a5kEM7E4I9WRpYPt7SA')  # Use env variable or fallback
-genai.configure(api_key=api_key)
-model = genai.GenerativeModel("gemini-1.5-flash")
+# 1. Tesseract Config
+tesseract_path = os.getenv('TESSERACT_CMD', r'C:\Program Files\Tesseract-OCR\tesseract.exe')
+if os.path.exists(tesseract_path):
+    pytesseract.pytesseract.tesseract_cmd = tesseract_path
+else:
+    print(f"⚠️ Warning: Tesseract not found at '{tesseract_path}'. OCR may fail.", file=sys.stderr)
 
-# --- OCR Step ---
-image_path = r"C:\Users\nithe\Downloads\samplelab.png"
+# 2. Gemini Client Config
+api_key = os.environ.get('GEMINI_API_KEY')
+if not api_key:
+    print("❌ Error: GEMINI_API_KEY not set.", file=sys.stderr)
+    sys.exit(1)
+
 try:
-    image = Image.open(image_path)
-    ocr_text = pytesseract.image_to_string(image)
+    client = genai.Client(api_key=api_key)
 except Exception as e:
-    print(f"Error reading image: {e}")
-    exit()
+    print(f"❌ Error initializing Gemini client: {e}", file=sys.stderr)
+    sys.exit(1)
 
-print("\n🧾 OCR Extracted Text:\n", ocr_text)
 
-# --- User Input ---
-region = input("\nEnter region: ")
-condition = input("Enter medical condition: ")
-weight = input("Enter weight (in kgs): ")
-age = input("Enter age: ")
+# --- Core Functions ---
+def extract_text_from_image(image_path):
+    """Extract text from image using OCR."""
+    try:
+        image = Image.open(image_path)
+        extracted_text = pytesseract.image_to_string(image, lang='eng')
+        return extracted_text.strip()
+    except Exception as e:
+        print(f"❌ OCR Error ({image_path}): {e}", file=sys.stderr)
+        return ""
 
-# --- Build Enhanced Prompt for API-friendly JSON ---
-prompt = f"""
-You are a medical AI assistant. Analyze the following lab report and provide a structured response.
 
-Lab Report OCR Text:
-{ocr_text}
+# --- JSON Schema (unchanged) ---
+JSON_SCHEMA = types.Schema(
+    type=types.Type.OBJECT,
+    properties={
+        "patient_info": types.Schema(
+            type=types.Type.OBJECT,
+            properties={
+                "region": types.Schema(type=types.Type.STRING),
+                "condition": types.Schema(type=types.Type.STRING),
+                "weight_kg": types.Schema(type=types.Type.STRING),
+                "age": types.Schema(type=types.Type.STRING)
+            }
+        ),
+        "lab_analysis": types.Schema(
+            type=types.Type.OBJECT,
+            properties={
+                "extracted_values": types.Schema(
+                    type=types.Type.ARRAY,
+                    items=types.Schema(
+                        type=types.Type.OBJECT,
+                        properties={
+                            "parameter": types.Schema(type=types.Type.STRING),
+                            "value": types.Schema(type=types.Type.NUMBER),
+                            "unit": types.Schema(type=types.Type.STRING),
+                            "status": types.Schema(type=types.Type.STRING)
+                        },
+                        required=["parameter", "value", "unit", "status"]
+                    )
+                ),
+                "summary": types.Schema(type=types.Type.STRING),
+                "concerns": types.Schema(type=types.Type.ARRAY, items=types.Schema(type=types.Type.STRING))
+            }
+        ),
+        "diet_plan": types.Schema(
+            type=types.Type.OBJECT,
+            properties={day: types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    "breakfast": types.Schema(type=types.Type.STRING),
+                    "lunch": types.Schema(type=types.Type.STRING),
+                    "dinner": types.Schema(type=types.Type.STRING),
+                    "snacks": types.Schema(type=types.Type.STRING)
+                }
+            ) for day in ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]}
+        ),
+        "recommendations": types.Schema(
+            type=types.Type.OBJECT,
+            properties={
+                "foods_to_include": types.Schema(type=types.Type.ARRAY, items=types.Schema(type=types.Type.STRING)),
+                "foods_to_avoid": types.Schema(type=types.Type.ARRAY, items=types.Schema(type=types.Type.STRING)),
+                "key_nutrients": types.Schema(type=types.Type.ARRAY, items=types.Schema(type=types.Type.STRING)),
+                "hydration": types.Schema(type=types.Type.STRING),
+                "exercise": types.Schema(type=types.Type.STRING)
+            }
+        )
+    },
+    required=["patient_info", "lab_analysis", "diet_plan", "recommendations"]
+)
 
-Patient Information:
-- Region: {region}
+
+# --- Gemini Call ---
+def generate_diet_plan(ocr_text, region, condition, weight, age):
+    """Generate diet plan using Gemini AI."""
+    prompt = f"""
+You are a specialized medical and nutritional AI assistant. Your task is to analyze a lab report's OCR text and patient info to generate a health and diet plan.
+
+Patient Data:
+- Region/Cuisine: {region}
 - Medical Condition: {condition}
 - Weight: {weight} kg
-- Age: {age}
+- Age: {age} years
 
-IMPORTANT: Respond ONLY with valid JSON in this exact format (no markdown, no extra text):
+Lab Report OCR Text:
+---
+{ocr_text}
+---
 
-{{
-  "patient_info": {{
-    "region": "{region}",
-    "condition": "{condition}",
-    "weight_kg": "{weight}",
-    "age": "{age}"
-  }},
-  "lab_analysis": {{
-    "extracted_values": [
-      {{"parameter": "glucose", "value": 0, "unit": "mg/dL", "status": "normal/high/low"}},
-      {{"parameter": "cholesterol", "value": 0, "unit": "mg/dL", "status": "normal/high/low"}}
-    ],
-    "summary": "Brief health summary based on lab values",
-    "concerns": ["List any concerning values"]
-  }},
-  "diet_plan": {{
-    "monday": {{
-      "breakfast": "Specific meal description",
-      "lunch": "Specific meal description", 
-      "dinner": "Specific meal description",
-      "snacks": "Healthy snack options"
-    }},
-    "tuesday": {{
-      "breakfast": "Specific meal description",
-      "lunch": "Specific meal description", 
-      "dinner": "Specific meal description",
-      "snacks": "Healthy snack options"
-    }},
-    "wednesday": {{
-      "breakfast": "Specific meal description",
-      "lunch": "Specific meal description", 
-      "dinner": "Specific meal description",
-      "snacks": "Healthy snack options"
-    }},
-    "thursday": {{
-      "breakfast": "Specific meal description",
-      "lunch": "Specific meal description", 
-      "dinner": "Specific meal description",
-      "snacks": "Healthy snack options"
-    }},
-    "friday": {{
-      "breakfast": "Specific meal description",
-      "lunch": "Specific meal description", 
-      "dinner": "Specific meal description",
-      "snacks": "Healthy snack options"
-    }},
-    "saturday": {{
-      "breakfast": "Specific meal description",
-      "lunch": "Specific meal description", 
-      "dinner": "Specific meal description",
-      "snacks": "Healthy snack options"
-    }},
-    "sunday": {{
-      "breakfast": "Specific meal description",
-      "lunch": "Specific meal description", 
-      "dinner": "Specific meal description",
-      "snacks": "Healthy snack options"
-    }}
-  }},
-  "recommendations": {{
-    "foods_to_include": ["List beneficial foods based on lab results"],
-    "foods_to_avoid": ["List foods to limit/avoid"],
-    "key_nutrients": ["Important nutrients to focus on"],
-    "hydration": "Daily water intake recommendation",
-    "exercise": "Basic exercise recommendations"
-  }}
-}}
-
-Instructions:
-- Extract ALL lab values from the OCR text
-- Consider {region} food preferences
-- Tailor meals to address any abnormal lab values
-- Provide specific, practical meal suggestions
-- Return ONLY the JSON structure above, no markdown formatting
+Follow JSON structure strictly (schema enforced). Analyze lab values, summarize key findings, create a 7-day diet plan, and add recommendations.
 """
 
-# --- Send to Gemini ---
-try:
-    response = model.generate_content(prompt)
-    result_text = response.text.strip()
-    
-    # Clean up response - remove markdown formatting if present
-    if "```json" in result_text:
-        result_text = result_text.split("```json")[1].split("```")[0].strip()
-    elif "```" in result_text:
-        result_text = result_text.split("```")[1].split("```")[0].strip()
-    
-    # Validate and parse JSON
     try:
-        parsed_result = json.loads(result_text)
-        
-        # Pretty print the validated JSON
-        formatted_json = json.dumps(parsed_result, indent=2, ensure_ascii=False)
-        
-        print("\n🧠 AI Analysis Results (API-Ready JSON):")
-        print("=" * 60)
-        print(formatted_json)
-        
-        # Save to file for API use
-        with open("diet_plan_api_response.json", "w", encoding="utf-8") as f:
-            json.dump(parsed_result, f, indent=2, ensure_ascii=False)
-        
-        print(f"\n💾 API-ready JSON saved to: diet_plan_api_response.json")
-        print("✅ JSON validation: PASSED - Ready for API integration!")
-        
-    except json.JSONDecodeError as e:
-        print(f"❌ JSON validation failed: {e}")
-        print("Raw response (for debugging):")
-        print(result_text)
-        
-        # Save raw response for debugging
-        with open("debug_raw_response.txt", "w", encoding="utf-8") as f:
-            f.write(result_text)
-        print("🔧 Raw response saved to debug_raw_response.txt")
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=JSON_SCHEMA
+            )
+        )
+        return response.text.strip()
+    except Exception as e:
+        print(f"❌ Gemini API Error: {e}", file=sys.stderr)
+        return None
 
-except Exception as e:
-    print(f"❌ Error during Gemini API call: {e}")
+
+# --- Main Execution ---
+def main():
+    if len(sys.argv) == 6:
+        image_path, region, condition, weight, age = sys.argv[1:6]
+        is_interactive = False
+    elif len(sys.argv) == 2 and sys.argv[1].lower() in ["-h", "--help"]:
+        print("\nUsage:")
+        print("  python script.py <lab_report_image> <region> <condition> <weight_kg> <age_years>")
+        print("\nExample:")
+        print("  python script.py C:\\reports\\lab.png 'South Indian' 'Type 2 Diabetes' 70 45")
+        sys.exit(0)
+    else:
+        print("\n❌ Invalid usage.")
+        print("Usage: python script.py <lab_report_image> <region> <condition> <weight_kg> <age_years>")
+        sys.exit(1)
+
+    if not os.path.exists(image_path):
+        print(f"❌ File not found: {image_path}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"📄 Processing Lab Report: {os.path.basename(image_path)}")
+
+    ocr_text = extract_text_from_image(image_path)
+    if not ocr_text:
+        print("❌ OCR extraction failed. Aborting.", file=sys.stderr)
+        sys.exit(1)
+
+    print("🧠 Generating structured diet plan using Gemini...")
+    result_text = generate_diet_plan(ocr_text, region, condition, weight, age)
+
+    if not result_text:
+        print("❌ Failed to get response from Gemini.", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        parsed = json.loads(result_text)
+        print(json.dumps(parsed, indent=2, ensure_ascii=False))
+        with open("diet_plan_output.json", "w", encoding="utf-8") as f:
+            json.dump(parsed, f, indent=2, ensure_ascii=False)
+        print("\n✅ Success! Output saved to diet_plan_output.json")
+    except json.JSONDecodeError as e:
+        print(f"❌ Gemini response not valid JSON: {e}", file=sys.stderr)
+        print(result_text, file=sys.stderr)
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

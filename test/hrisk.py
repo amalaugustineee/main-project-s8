@@ -26,7 +26,7 @@ NCBI_ESearch = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
 NCBI_ESummary = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
 
 # Optional PubMed API key for higher rate limits
-NCBI_API_KEY = os.getenv("NCBI_API_KEY")
+NCBI_API_KEY = ""
 
 # ---------- OCR ----------
 def ocr_file(path):

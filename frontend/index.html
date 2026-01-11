@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Medical Intelligence Frontend</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Medical Intelligence</h1>
+      <p>Prescription extraction, Health-risk analysis, and Diet plan generation</p>
+      <label for="apiBase">API base URL:</label>
+      <input id="apiBase" type="text" placeholder="http://127.0.0.1:8000" value="http://127.0.0.1:8000" />
+      <button id="saveBase">Save</button>
+    </header>
+
+    <main>
+      <section class="card">
+        <h2>Welcome</h2>
+        <p>Choose a tool:</p>
+        <p>
+          <a class="btn" href="prescription.html">Prescription</a>
+          <a class="btn" href="healthrisk.html">Health Risk</a>
+          <a class="btn" href="diet.html">Diet Plan</a>
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Wellbeing Chat</h2>
+        <p>Ask general daily health and wellness questions.</p>
+        <div id="chatBox" class="chat">
+          <div id="chatMessages" class="chat-messages" aria-live="polite"></div>
+          <form id="chatForm" class="chat-form">
+            <input id="chatInput" type="text" placeholder="e.g., How can I sleep better?" required />
+            <button type="submit">Send</button>
+          </form>
+          <small class="chat-note">Advice is general well-being guidance, not medical diagnosis.</small>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <small>Tip: Run your API with <code>uvicorn test.app:app --reload</code></small>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+  </html>
+
+
