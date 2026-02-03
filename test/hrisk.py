@@ -10,18 +10,23 @@ from PIL import Image
 import pytesseract
 import shutil
 import re 
+from google import genai
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
+
 # ---------- CONFIG ----------
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-# API endpoints
-# Model ID is corrected to the stable REST API identifier
-GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+# Initialize Gemini Client
+client = None
+if GEMINI_API_KEY:
+    client = genai.Client(api_key=GEMINI_API_KEY)
+
+# NCBI Endpoints
 NCBI_ESearch = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
 NCBI_ESummary = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
 
@@ -62,79 +67,70 @@ def ocr_file(path):
         return pytesseract.image_to_string(img)
 
 # ---------- GEMINI ----------
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=5, max=30),
+    retry=retry_if_exception_type(Exception)
+)
 def analyze_with_gemini(ocr_text):
     """
     Sends OCR text to Gemini and asks for structured JSON-like output.
     Returns structured analysis of lab report values and risks.
     """
-    if not GEMINI_API_KEY:
-        raise ValueError("GEMINI_API_KEY environment variable not set")
+    if not client:
+        raise ValueError("GEMINI_API_KEY environment variable not set or client init failed")
 
     prompt = f"""
-You are a medical data analysis model. The following text is an OCR extraction from a patient's lab report.
-
-Your task:
-1. Identify each test and its current value with units.
-2. Compare each value with the safe/normal range.
-3. Assign a health risk percentage (0–100%) based on how far it deviates from normal.
-4. Give a short reason (using the test value).
-5. Output in **strict JSON** with the following structure:
-
-{{
-  "summary": "overall health risk summary sentence",
-  "tests": [
+    You are a medical data analysis model. The following text is an OCR extraction from a patient's lab report.
+    
+    Your task:
+    1. Identify each test and its current value with units.
+    2. Compare each value with the safe/normal range.
+    3. Assign a health risk percentage (0–100%) based on how far it deviates from normal.
+    4. Give a short reason (using the test value).
+    5. Output in **strict JSON** with the following structure:
+    
     {{
-      "name": "LDL Cholesterol",
-      "current_value": "165 mg/dL",
-      "safe_range": "<100 mg/dL",
-      "risk_percent": 75,
-      "risk_reason": "LDL above 130 mg/dL increases CVD risk"
-    }},
-    ...
-  ]
-}}
+      "summary": "overall health risk summary sentence",
+      "tests": [
+        {{
+          "name": "LDL Cholesterol",
+          "current_value": "165 mg/dL",
+          "safe_range": "<100 mg/dL",
+          "risk_percent": 75,
+          "risk_reason": "LDL above 130 mg/dL increases CVD risk"
+        }},
+        ...
+      ]
+    }}
+    
+    Return **only JSON**, no extra text.
+    
+    Lab report text:
+    \"\"\"{ocr_text}\"\"\"
+    """
 
-Return **only JSON**, no extra text.
-
-Lab report text:
-\"\"\"{ocr_text}\"\"\"
-"""
-
-    # The API key must be sent as a 'key' query parameter
-    corrected_url = f"{GEMINI_API_URL}?key={GEMINI_API_KEY}"
-
-    headers = {"Content-Type": "application/json"}
-    payload = {
-        "contents": [{"parts": [{"text": prompt}]}]
-    }
-
-    # ✅ CORRECTION: Increased the read timeout to 120 seconds to prevent time-out errors
-    response = requests.post(
-        corrected_url, 
-        headers=headers,
-        json=payload,
-        timeout=120 
-    )
-
-    response.raise_for_status()
-    data = response.json()
-
-    # Extract text response from Gemini
     try:
-        text = data["candidates"][0]["content"]["parts"][0]["text"]
-    except Exception:
-        text = str(data)
+        response = client.models.generate_content(
+            model="gemini-2.5-flash-preview-09-2025",
+            contents=prompt
+        )
 
-    # Try parsing JSON safely
-    try:
+        text = response.text.strip()
         # Use re.sub to strip markdown code fences (```json or ```) that the model might add
         fixed = re.sub(r"^\s*```json\s*|\s*```\s*$", "", text, flags=re.MULTILINE).strip()
         parsed = json.loads(fixed)
+        return parsed
+
     except json.JSONDecodeError as e:
         # Re-raise with context if parsing fails
         logging.error(f"Failed to parse JSON response from Gemini. Text was: {text[:500]}...")
         raise json.JSONDecodeError(f"Gemini response not strict JSON: {e}", doc=text, pos=0)
-    return parsed
+    except Exception as e:
+        logging.error(f"Gemini analysis failed: {e}")
+        raise
 
 # ---------- PUBMED ----------
 def fetch_pubmed_articles(test_name, retmax=2):
@@ -149,25 +145,29 @@ def fetch_pubmed_articles(test_name, retmax=2):
     }
     if NCBI_API_KEY:
         params["api_key"] = NCBI_API_KEY
-    r = requests.get(NCBI_ESearch, params=params, timeout=20)
-    r.raise_for_status()
-    ids = r.json().get("esearchresult", {}).get("idlist", [])
-    if not ids:
+    try:
+        r = requests.get(NCBI_ESearch, params=params, timeout=20)
+        r.raise_for_status()
+        ids = r.json().get("esearchresult", {}).get("idlist", [])
+        if not ids:
+            return []
+        params = {"db": "pubmed", "id": ",".join(ids), "retmode": "json"}
+        r = requests.get(NCBI_ESummary, params=params, timeout=20)
+        r.raise_for_status()
+        summaries = []
+        for pid in ids:
+            info = r.json().get("result", {}).get(pid)
+            if info:
+                summaries.append({
+                    "title": info.get("title"),
+                    "source": info.get("source"),
+                    "pubdate": info.get("pubdate"),
+                    "url": f"https://pubmed.ncbi.nlm.nih.gov/{pid}/"
+                })
+        return summaries
+    except Exception as e:
+        logging.warning(f"PubMed fetch failed: {e}")
         return []
-    params = {"db": "pubmed", "id": ",".join(ids), "retmode": "json"}
-    r = requests.get(NCBI_ESummary, params=params, timeout=20)
-    r.raise_for_status()
-    summaries = []
-    for pid in ids:
-        info = r.json().get("result", {}).get(pid)
-        if info:
-            summaries.append({
-                "title": info.get("title"),
-                "source": info.get("source"),
-                "pubdate": info.get("pubdate"),
-                "url": f"https://pubmed.ncbi.nlm.nih.gov/{pid}/"
-            })
-    return summaries
 
 # ---------- MAIN ----------
 def analyze_labreport(path):
@@ -205,17 +205,17 @@ def analyze_labreport(path):
     # Enrich each test with PubMed research
     for t in tests:
         name = t.get("name", "")
-        logging.info(f"📚 Looking up PubMed for: {name}")
+        # logging.info(f"📚 Looking up PubMed for: {name}")
         try:
             articles = fetch_pubmed_articles(name)
             t["pubmed_support"] = articles
-        except RequestException as e:
+        except Exception as e:
             logging.warning(f"PubMed lookup failed for {name}: {e}")
             t["pubmed_support"] = []
     
     logging.info("\n===== Health Risk Analysis =====")
-    # Print the final result
-    print(json.dumps(gemini_output, indent=2))
+    # Print the final result in a safe way if needed
+    # print(json.dumps(gemini_output, indent=2))
     
     return gemini_output
 
@@ -229,7 +229,7 @@ if __name__ == "__main__":
             print("\nSupported formats: PDF, PNG, JPG, TIFF")
             sys.exit(1)
             
-        result = analyze_labreport(sys.argv[1])
+        analyze_labreport(sys.argv[1])
         sys.exit(0)
         
     except FileNotFoundError as e:
@@ -239,7 +239,7 @@ if __name__ == "__main__":
         logging.error(f"Error: {e}")
         sys.exit(3)
     except EnvironmentError as e:
-        # Catches Tesseract environment issues AND the final error raised from main (the 404 in this case)
+        # Catches Tesseract environment issues AND the final error raised from main
         logging.error(f"Environment Error: {e}")
         sys.exit(4)
     except Exception as e:

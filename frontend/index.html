@@ -1,51 +1,112 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Medical Intelligence Frontend</title>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <header>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Medical Intelligence Frontend</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <header>
+    <div>
       <h1>Medical Intelligence</h1>
-      <p>Prescription extraction, Health-risk analysis, and Diet plan generation</p>
-      <label for="apiBase">API base URL:</label>
-      <input id="apiBase" type="text" placeholder="http://127.0.0.1:8000" value="http://127.0.0.1:8000" />
-      <button id="saveBase">Save</button>
-    </header>
+    </div>
+    <nav>
+      <a href="index.html" class="active">Home</a>
+      <a href="prescription.html">Prescription</a>
+      <a href="healthrisk.html">Risk</a>
+      <a href="diet.html">Diet</a>
+      <a href="summary.html">Summary</a>
+    </nav>
+  </header>
 
-    <main>
-      <section class="card">
-        <h2>Welcome</h2>
-        <p>Choose a tool:</p>
-        <p>
-          <a class="btn" href="prescription.html">Prescription</a>
-          <a class="btn" href="healthrisk.html">Health Risk</a>
-          <a class="btn" href="diet.html">Diet Plan</a>
-        </p>
-      </section>
+  <main>
+    <!-- Hero Section -->
+    <section class="card" style="text-align: center; padding: 4rem 2rem; background: var(--bg-gradient);">
+      <h2 style="justify-content: center; font-size: 2.5rem; margin-bottom: 0.5rem; border:none;">Your Health, Decoded.
+      </h2>
+      <p style="color: var(--text-light); font-size: 1.1rem; max-width: 600px; margin: 0 auto 2rem auto;">
+        Advanced AI analysis for prescriptions, lab reports, and personalized diet planning.
+      </p>
+      <div style="display: flex; gap: 1rem; justify-content: center;">
+        <a class="btn" href="summary.html">View Health Summary</a>
+        <a class="btn" href="healthrisk.html"
+          style="background: white; color: var(--accent); border: 1px solid var(--accent);">Check Risk</a>
+      </div>
+    </section>
 
-      <section class="card">
-        <h2>Wellbeing Chat</h2>
-        <p>Ask general daily health and wellness questions.</p>
-        <div id="chatBox" class="chat">
-          <div id="chatMessages" class="chat-messages" aria-live="polite"></div>
-          <form id="chatForm" class="chat-form">
-            <input id="chatInput" type="text" placeholder="e.g., How can I sleep better?" required />
-            <button type="submit">Send</button>
-          </form>
-          <small class="chat-note">Advice is general well-being guidance, not medical diagnosis.</small>
+    <!-- Features Grid -->
+    <section class="cols">
+      <a href="prescription.html" class="card" style="text-decoration:none; color:inherit; display:block;">
+        <h3>💊 Prescription Analysis</h3>
+        <p style="color:var(--text-light)">Digitize and understand your doctor's handwritten notes instantly.</p>
+      </a>
+      <a href="healthrisk.html" class="card" style="text-decoration:none; color:inherit; display:block;">
+        <h3>📊 Health Risk Assessment</h3>
+        <p style="color:var(--text-light)">Analyze lab reports to identify potential risks early.</p>
+      </a>
+      <a href="diet.html" class="card" style="text-decoration:none; color:inherit; display:block;">
+        <h3>🥗 Smart Diet Plans</h3>
+        <p style="color:var(--text-light)">Get personalized meal plans based on your health condition.</p>
+      </a>
+      <a href="trends.html" class="card" style="text-decoration:none; color:inherit; display:block;">
+        <h3>📈 Trend Analysis</h3>
+        <p style="color:var(--text-light)">Visualize your vital health metrics over time.</p>
+      </a>
+    </section>
+
+    <!-- Medicine Reminders -->
+    <section class="card" id="reminderSection">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h2>⏰ Medicine Queue</h2>
+        <button id="btnRefreshQueue"
+          style="background:transparent; border:1px solid #ccc; color:#555; padding:5px 10px; font-size:0.8rem; cursor:pointer; border-radius:15px;">Refresh</button>
+      </div>
+      <div id="reminderQueue" style="display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1rem;">
+        <p>Initializing...</p>
+      </div>
+      <div id="summaryContent" style="margin-top: 1rem; line-height: 1.6;">
+        <p>No analysis generated yet.</p>
+      </div>
+
+      <!-- New: Indicators Graph -->
+      <div id="summaryGraphs" style="margin-top: 2rem; display:none;">
+        <h3>📊 Key Health Indicators</h3>
+        <p style="font-size:0.9em; color:#666;">Trends from your uploaded lab reports.</p>
+        <div style="height: 300px; margin-top: 1rem;">
+          <canvas id="summaryChart"></canvas>
         </div>
-      </section>
-    </main>
+      </div>
+    </section>
 
-    <footer>
-      <small>Tip: Run your API with <code>uvicorn test.app:app --reload</code></small>
-    </footer>
+    <!-- Chat Section -->
+    <section class="card">
+      <h2>🤖 Wellbeing Assistant</h2>
+      <p>Ask general questions about sleep, hydration, or daily habits.</p>
+      <div id="chatBox" class="chat"
+        style="background: rgba(255,255,255,0.6); padding: 1rem; border-radius: var(--radius-md);">
+        <div id="chatMessages" class="chat-messages"
+          style="height: 200px; overflow-y: auto; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+        </div>
+        <form id="chatForm" class="chat-form" style="display: flex; gap: 0.5rem;">
+          <input id="chatInput" type="text" placeholder="e.g., How can I sleep better?" required />
+          <button type="submit" style="white-space: nowrap;">Send</button>
+        </form>
+      </div>
+    </section>
+  </main>
 
-    <script src="app.js"></script>
-  </body>
-  </html>
+  <footer>
+    <small>&copy; 2026 Medical Intelligence AI</small>
+  </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script
+    src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+  <script src="app.js?v=14"></script>
+</body>
 
+</html>

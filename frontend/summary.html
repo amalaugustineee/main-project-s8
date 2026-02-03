@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Health Summary | Medical Intelligence</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+    <header>
+        <div>
+            <h1>Health Summary</h1>
+            <p style="margin:0; opacity:0.7; font-size:0.9rem;">AI-Driven Analysis</p>
+        </div>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="prescription.html">Prescription</a>
+            <a href="healthrisk.html">Risk</a>
+            <a href="diet.html">Diet</a>
+            <a href="summary.html" class="active">Summary</a>
+        </nav>
+        <div class="nav-config" style="display:none;"> <!-- Hidden for cleaner UI, still functional via JS logic -->
+            <input id="apiBase" type="text" value="http://127.0.0.1:8000" />
+            <button id="saveBase">Save</button>
+        </div>
+    </header>
+
+    <main>
+        <section class="card">
+            <h2>Health Trends Overview</h2>
+            <div class="chart-container" style="position: relative; height:300px; width:100%">
+                <canvas id="summaryChart"></canvas>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>History Data</h2>
+            <div class="cols">
+                <div class="panel">
+                    <h3>Recent Lab Reports</h3>
+                    <div id="historyReports" class="history-list">Loading...</div>
+                </div>
+                <div class="panel">
+                    <h3>Recent Prescriptions</h3>
+                    <div id="historyPrescriptions" class="history-list">Loading...</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2>Current Health Condition</h2>
+            <p>Based on your recent lab reports and prescriptions.</p>
+            <button id="btnLoadSummary">Generate Summary</button>
+            <div id="viewSummary" class="view hidden">
+                <div id="summaryContent" class="markdown-body"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <small>Tip: Run your API with <code>uvicorn test.app:app --reload</code></small>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
+    <script src="app.js?v=15"></script>
+</body>
+
+</html>

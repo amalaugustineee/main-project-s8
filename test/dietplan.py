@@ -101,28 +101,40 @@ JSON_SCHEMA = types.Schema(
 
 
 # --- Gemini Call ---
-def generate_diet_plan(ocr_text, region, condition, weight, age):
+# --- Gemini Call ---
+def generate_diet_plan(current_health_status, region, cuisine, condition, weight, age, allergies, historical_context):
     """Generate diet plan using Gemini AI."""
     prompt = f"""
-You are a specialized medical and nutritional AI assistant. Your task is to analyze a lab report's OCR text and patient info to generate a health and diet plan.
+You are a specialized medical and nutritional AI assistant. Your task is to analyze the patient's latest health report, patient info, and historical health trends to generate a personalized health and diet plan.
 
 Patient Data:
-- Region/Cuisine: {region}
-- Medical Condition: {condition}
+- Region: {region}
+- Cuisine Preference: {cuisine}
+- Medical Condition (Current): {condition}
 - Weight: {weight} kg
 - Age: {age} years
+- Allergies/Restrictions: {allergies}
 
-Lab Report OCR Text:
+Historical Health Trends (Previous Reports):
+{historical_context}
+
+Latest Health Report Analysis (from Database):
 ---
-{ocr_text}
+{current_health_status}
 ---
 
-Follow JSON structure strictly (schema enforced). Analyze lab values, summarize key findings, create a 7-day diet plan, and add recommendations.
+Instructions:
+1. Analyze the Latest Health Report to understand the user's immediate needs.
+2. Consider the Historical Health Trends to see the trajectory.
+3. Create a 7-day diet plan strictly adhering to the Region, Cuisine, and Allergies.
+4. Provide recommendations that are medically sound and practical.
+
+Follow the JSON structure strictly.
 """
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-2.5-flash-preview-09-2025",
             contents=prompt,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",

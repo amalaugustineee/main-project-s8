@@ -1,51 +1,52 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Health Risk | Medical Intelligence</title>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <header>
-      <h1>Health Risk Analyzer</h1>
-      <p>Upload a lab report to analyze risks</p>
-      <nav>
-        <a href="index.html">Home</a>
-        <a href="prescription.html">Prescription</a>
-        <a href="healthrisk.html"><strong>Health Risk</strong></a>
-        <a href="diet.html">Diet Plan</a>
-      </nav>
-      <div class="nav-config">
-        <label for="apiBase">API base URL:</label>
-        <input id="apiBase" type="text" placeholder="http://127.0.0.1:8000" value="http://127.0.0.1:8000" />
-        <button id="saveBase">Save</button>
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Health Risk | Medical Intelligence</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <header>
+    <div>
+      <h1>Health Risk</h1>
+      <p style="margin:0; opacity:0.7; font-size:0.9rem;">Lab Report Analysis</p>
+    </div>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="prescription.html">Prescription</a>
+      <a href="healthrisk.html" class="active">Risk</a>
+      <a href="diet.html">Diet</a>
+      <a href="summary.html">Summary</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="card">
+      <h2>Analyze Health Risk</h2>
+      <form id="formHealthRisk">
+        <input type="file" name="file" accept="image/*,.pdf" required />
+        <button type="submit">Analyze</button>
+      </form>
+      <div class="panel">
+        <h3>Risk Dashboard</h3>
+        <canvas id="riskChart" height="200"></canvas>
       </div>
-    </header>
+      <div id="viewHealthRisk" class="view hidden"></div>
+      <button id="btnSaveReport" class="hidden" style="margin-top: 1rem; background-color: #28a745;">Save Report to
+        History</button>
+      <pre id="outHealthRisk" class="output"></pre>
+    </section>
+  </main>
 
-    <main>
-      <section class="card">
-        <h2>Analyze Health Risk</h2>
-        <form id="formHealthRisk">
-          <input type="file" name="file" accept="image/*,.pdf" required />
-          <button type="submit">Analyze</button>
-        </form>
-        <div class="panel">
-          <h3>Risk Dashboard</h3>
-          <canvas id="riskChart" height="200"></canvas>
-        </div>
-        <div id="viewHealthRisk" class="view hidden"></div>
-        <pre id="outHealthRisk" class="output"></pre>
-      </section>
-    </main>
+  <footer>
+    <small>Tip: Run your API with <code>uvicorn test.app:app --reload</code></small>
+  </footer>
 
-    <footer>
-      <small>Tip: Run your API with <code>uvicorn test.app:app --reload</code></small>
-    </footer>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="app.js?v=6"></script>
+</body>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="app.js"></script>
-  </body>
-  </html>
-
-
+</html>

@@ -66,19 +66,21 @@ def analyze_prescription_with_gemini(ocr_text):
     Sends OCR text to Gemini and asks for structured JSON of medicines, frequency, and duration.
     """
     prompt = (
-        "Extract medicine details from the following prescription text. "
-        "Return the result as a **single-line JSON array of objects**. "
-        "Each object must contain: "
-        "'medicine' → name of the medicine, "
-        "'frequency' → when to take the medicine (morning-afternoon-night) like '1-0-1', "
-        "'days' → number of days to take it or 'PRN' if as needed. "
-        "If the text is unclear, infer possible values carefully.\n\n"
+        "Extract prescription details from the following text. "
+        "Return a **single JSON object** with the following keys:\n"
+        "- 'doctor_name': Name of the doctor (or 'Unknown').\n"
+        "- 'hospital_name': Name of the hospital/clinic (or 'Unknown').\n"
+        "- 'medicines': A list of objects, each containing:\n"
+        "   - 'medicine': Name of the medicine.\n"
+        "   - 'frequency': Dosing frequency (e.g., '1-0-1').\n"
+        "   - 'days': Duration (number of days or 'PRN').\n"
+        "   - 'timings': Specific timing instructions (e.g., 'After Food', 'Empty Stomach', 'Night').\n\n"
         f"Prescription text:\n{ocr_text}"
     )
 
     try:
         response = client.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-2.5-flash-preview-09-2025",
             contents=prompt
         )
 

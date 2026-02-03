@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Health Trends | Medical Intelligence</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+    <header>
+        <h1>Health Trends</h1>
+        <p>Track your health metrics over time</p>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="prescription.html">Prescription</a>
+            <a href="healthrisk.html">Health Risk</a>
+            <a href="diet.html">Diet Plan</a>
+            <a href="trends.html"><strong>Trends</strong></a>
+        </nav>
+        <div class="nav-config">
+            <label for="apiBase">API base URL:</label>
+            <input id="apiBase" type="text" placeholder="http://127.0.0.1:8000" value="http://127.0.0.1:8000" />
+            <button id="saveBase">Save</button>
+        </div>
+    </header>
+
+    <main>
+        <section class="card">
+            <h2>Trends Analysis</h2>
+            <div class="controls">
+                <label for="trendParam">Select Parameter:</label>
+                <select id="trendParam">
+                    <option value="">-- Select a Test --</option>
+                </select>
+                <button id="btnLoadTrend">Load Trend</button>
+            </div>
+
+            <div class="panel">
+                <canvas id="trendChart" height="200"></canvas>
+            </div>
+            <p id="trendStatus"></p>
+        </section>
+    </main>
+
+    <footer>
+        <small>Tip: Run your API with <code>uvicorn test.app:app --reload</code></small>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.1/dist/chartjs-adapter-moment.min.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
