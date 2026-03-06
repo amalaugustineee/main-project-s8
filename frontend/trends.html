@@ -1,57 +1,936 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Health Trends | Medical Intelligence</title>
-    <link rel="stylesheet" href="styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vitality | Health Trends</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <link href="https://api.fontshare.com/v2/css?f[]=outfit@300,400,500,600,700&f[]=satoshi@400,500,700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --sage: #88A68B;
+            --sage-dark: #4D6B53;
+            --terracotta: #D47B5A;
+            --mustard: #E8B86D;
+            --cream: #FDFBF7;
+            --beige: #F5EFE6;
+        }
+
+        body {
+            font-family: 'Satoshi', sans-serif;
+            background: var(--cream);
+            color: #2D302D;
+            margin: 0;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: -0.02em;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: var(--sage);
+            border-radius: 10px;
+        }
+
+        .card-hover {
+            transition: all 0.3s;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 24px -10px rgba(77, 107, 83, 0.15);
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+
+        /* Gauge */
+        .gauge-circle {
+            transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
 </head>
 
 <body>
-    <header>
-        <h1>Health Trends</h1>
-        <p>Track your health metrics over time</p>
-        <nav>
-            <a href="index.html">Home</a>
-            <a href="prescription.html">Prescription</a>
-            <a href="healthrisk.html">Health Risk</a>
-            <a href="diet.html">Diet Plan</a>
-            <a href="trends.html"><strong>Trends</strong></a>
-        </nav>
-        <div class="nav-config">
-            <label for="apiBase">API base URL:</label>
-            <input id="apiBase" type="text" placeholder="http://127.0.0.1:8000" value="http://127.0.0.1:8000" />
-            <button id="saveBase">Save</button>
+    <div class="flex min-h-screen bg-[#FDFBF7]">
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+      <style>
+        .sidebar {
+          width: 220px;
+          background: linear-gradient(160deg, #F5EFE6 0%, #F0EBE0 100%);
+          border-right: 1px solid #E8E1D5;
+          display: flex;
+          flex-direction: column;
+          padding: 20px 14px;
+          height: 100vh;
+          position: sticky;
+          top: 0;
+          flex-shrink: 0;
+          z-index: 50;
+        }
+        .sidebar-logo {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 24px;
+          padding: 0 4px;
+        }
+        .sidebar-logo-icon {
+          width: 40px; height: 40px;
+          background: linear-gradient(135deg, #88A68B 0%, #4D6B53 100%);
+          border-radius: 14px;
+          display: flex; align-items: center; justify-content: center;
+          color: white; font-size: 20px;
+          box-shadow: 0 4px 12px rgba(77,107,83,0.3);
+          flex-shrink: 0;
+        }
+        .sidebar-logo-text {
+          font-family: 'Outfit', sans-serif;
+          font-size: 18px;
+          font-weight: 700;
+          color: #4D6B53;
+          letter-spacing: -0.3px;
+        }
+        .sidebar-logo-sub {
+          font-size: 9px;
+          color: #8B9E8C;
+          font-family: 'Satoshi', sans-serif;
+          font-weight: 500;
+          text-transform: uppercase;
+          letter-spacing: 0.8px;
+          margin-top: -2px;
+        }
+        .nav-section-label {
+          font-size: 9px;
+          font-weight: 700;
+          color: #B5AEA3;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          padding: 0 8px;
+          margin: 4px 0 6px;
+        }
+        .nav-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 9px 10px;
+          border-radius: 16px;
+          text-decoration: none;
+          color: #6D726D;
+          position: relative;
+          transition: all 0.2s ease;
+          margin-bottom: 3px;
+          font-family: 'Satoshi', sans-serif;
+          font-size: 13px;
+          font-weight: 500;
+        }
+        .nav-active {
+          font-weight: 700;
+        }
+        .nav-icon {
+          width: 30px; height: 30px;
+          border-radius: 10px;
+          display: flex; align-items: center; justify-content: center;
+          color: white;
+          font-size: 14px;
+          flex-shrink: 0;
+          transition: background 0.2s;
+        }
+        .nav-label {
+          flex: 1;
+          transition: color 0.2s;
+        }
+        .nav-dot {
+          width: 6px; height: 6px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+        .sidebar-footer {
+          margin-top: auto;
+          padding: 12px 8px 0;
+          border-top: 1px solid #E8E1D5;
+        }
+        .sidebar-badge {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px;
+          background: linear-gradient(135deg, rgba(136,166,139,0.15) 0%, rgba(77,107,83,0.08) 100%);
+          border-radius: 14px;
+          border: 1px solid rgba(136,166,139,0.2);
+        }
+        .sidebar-badge-icon {
+          width: 28px; height: 28px;
+          background: linear-gradient(135deg, #88A68B 0%, #4D6B53 100%);
+          border-radius: 8px;
+          display: flex; align-items: center; justify-content: center;
+          color: white; font-size: 12px; flex-shrink: 0;
+        }
+        .sidebar-badge-text {
+          font-size: 10px; line-height: 1.4;
+          font-family: 'Satoshi', sans-serif;
+        }
+        .sidebar-badge-text strong {
+          display: block; color: #4D6B53; font-weight: 700; font-size: 10.5px;
+        }
+        .sidebar-badge-text span {
+          color: #8B9E8C;
+        }
+      </style>
+
+      <!-- Logo -->
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">
+          <iconify-icon icon="lucide:heart-pulse"></iconify-icon>
         </div>
-    </header>
+        <div>
+          <div class="sidebar-logo-text">Vitality</div>
+          <div class="sidebar-logo-sub">Health AI</div>
+        </div>
+      </div>
 
-    <main>
-        <section class="card">
-            <h2>Trends Analysis</h2>
-            <div class="controls">
-                <label for="trendParam">Select Parameter:</label>
-                <select id="trendParam">
-                    <option value="">-- Select a Test --</option>
-                </select>
-                <button id="btnLoadTrend">Load Trend</button>
+      <!-- Navigation -->
+      <div class="nav-section-label">Navigation</div>
+      <nav style="flex:1">
+        <a href="index.html" class="nav-item" data-color="#7C6EBA" data-bg="#EDE9F9"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:layout-dashboard"></iconify-icon>
+          </span>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a href="prescription.html" class="nav-item" data-color="#D47B5A" data-bg="#FBF0EC"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:pill"></iconify-icon>
+          </span>
+          <span class="nav-label">Prescriptions</span>
+        </a>
+        <a href="labreports.html" class="nav-item" data-color="#5B8DB8" data-bg="#EBF3FA"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:microscope"></iconify-icon>
+          </span>
+          <span class="nav-label">Lab Reports</span>
+        </a>
+        <a href="diet.html" class="nav-item" data-color="#88A68B" data-bg="#EDF3EE"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:salad"></iconify-icon>
+          </span>
+          <span class="nav-label">Meal Planner</span>
+        </a>
+        <a href="trends.html" class="nav-item nav-active" style="background:#FDF5E8; color:#E8B86D">
+          <span class="nav-icon" style="background:#E8B86D">
+            <iconify-icon icon="lucide:trending-up"></iconify-icon>
+          </span>
+          <span class="nav-label">Trends</span>
+          <span class="nav-dot" style="background:#E8B86D"></span>
+        </a>
+        <a href="summary.html" class="nav-item" data-color="#4D9B8A" data-bg="#E8F5F3"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:shield-check"></iconify-icon>
+          </span>
+          <span class="nav-label">Health Summary</span>
+        </a>
+      </nav>
+
+      <!-- Footer badge -->
+      <div class="sidebar-footer">
+        <div class="sidebar-badge">
+          <div class="sidebar-badge-icon">
+            <iconify-icon icon="lucide:sparkles"></iconify-icon>
+          </div>
+          <div class="sidebar-badge-text">
+            <strong>AI Powered</strong>
+            <span>Local LLM · Private</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 p-6 lg:p-10 overflow-y-auto custom-scrollbar">
+            <div class="space-y-10 max-w-7xl mx-auto">
+
+                <!-- Header -->
+                <header class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-3xl font-bold text-[#2D302D] mb-1">Health Trends</h1>
+                        <p class="text-[#6D726D]">Biomarker history from your lab reports</p>
+                    </div>
+                    <a href="labreports.html"
+                        class="flex items-center gap-2 px-5 py-2.5 bg-[#88A68B] text-white rounded-2xl font-bold text-sm hover:bg-[#4D6B53] transition-all shadow-md">
+                        <iconify-icon icon="lucide:upload"></iconify-icon>
+                        Upload Lab Report
+                    </a>
+                </header>
+
+                <!-- Top: Wellness Score + Key Stats -->
+                <section class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+                    <!-- Health Score Gauge -->
+                    <div
+                        class="lg:col-span-4 bg-[#4D6B53] rounded-[40px] p-8 text-white relative overflow-hidden flex flex-col items-center justify-center text-center shadow-xl shadow-[#4D6B53]/20">
+                        <p class="text-white/70 text-[10px] font-bold uppercase tracking-widest mb-4">Vitality Wellness
+                            Score</p>
+                        <div class="relative w-44 h-44 flex items-center justify-center mb-4">
+                            <svg class="w-full h-full" viewBox="0 0 160 160">
+                                <circle cx="80" cy="80" r="68" stroke="rgba(255,255,255,0.15)" stroke-width="14"
+                                    fill="transparent" />
+                                <circle id="scoreGaugeCircle" cx="80" cy="80" r="68" stroke="white" stroke-width="14"
+                                    fill="transparent" stroke-dasharray="427" stroke-dashoffset="427"
+                                    stroke-linecap="round" transform="rotate(-90 80 80)" class="gauge-circle" />
+                            </svg>
+                            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                                <span id="scoreValue" class="text-5xl font-bold">—</span>
+                                <span id="scoreGrade"
+                                    class="text-[10px] font-bold uppercase opacity-60">calculating</span>
+                            </div>
+                        </div>
+                        <p id="scoreSubtext" class="text-sm text-white/80 leading-relaxed">
+                            <iconify-icon icon="lucide:loader-2" class="spin mr-1"></iconify-icon>
+                            Loading health data…
+                        </p>
+                    </div>
+
+                    <!-- Key Biomarker Summary Cards -->
+                    <div class="lg:col-span-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div id="biomarkerCards" class="col-span-2 md:col-span-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <!-- Skeleton placeholders -->
+                            <div class="bg-white rounded-[28px] p-5 border border-[#F5EFE6] animate-pulse">
+                                <div class="h-3 bg-gray-100 rounded w-16 mb-3"></div>
+                                <div class="h-7 bg-gray-100 rounded w-12 mb-2"></div>
+                                <div class="h-2 bg-gray-100 rounded w-20"></div>
+                            </div>
+                            <div class="bg-white rounded-[28px] p-5 border border-[#F5EFE6] animate-pulse">
+                                <div class="h-3 bg-gray-100 rounded w-16 mb-3"></div>
+                                <div class="h-7 bg-gray-100 rounded w-12 mb-2"></div>
+                                <div class="h-2 bg-gray-100 rounded w-20"></div>
+                            </div>
+                            <div class="bg-white rounded-[28px] p-5 border border-[#F5EFE6] animate-pulse">
+                                <div class="h-3 bg-gray-100 rounded w-16 mb-3"></div>
+                                <div class="h-7 bg-gray-100 rounded w-12 mb-2"></div>
+                                <div class="h-2 bg-gray-100 rounded w-20"></div>
+                            </div>
+                            <div class="bg-white rounded-[28px] p-5 border border-[#F5EFE6] animate-pulse">
+                                <div class="h-3 bg-gray-100 rounded w-16 mb-3"></div>
+                                <div class="h-7 bg-gray-100 rounded w-12 mb-2"></div>
+                                <div class="h-2 bg-gray-100 rounded w-20"></div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Trends Chart + Parameter Selector + Risk Radar -->
+                <section id="trendsChartSection" class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    <!-- Main Line Chart -->
+                    <div class="lg:col-span-8 bg-white rounded-[40px] p-8 shadow-sm border border-[#F5EFE6]">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                            <div>
+                                <h3 class="text-2xl font-bold text-[#2D302D]">Biomarker Trend Analysis</h3>
+                                <p class="text-sm text-[#6D726D]">Historical values from your lab reports</p>
+                            </div>
+                            <!-- Parameter Selector -->
+                            <div class="flex items-center gap-2">
+                                <select id="paramSelector"
+                                    class="bg-[#F5EFE6] text-[#4D6B53] font-bold text-sm rounded-2xl px-4 py-2.5 border-0 outline-none focus:ring-2 focus:ring-[#88A68B] cursor-pointer">
+                                    <option value="">Loading parameters…</option>
+                                </select>
+                                <button id="btnAddParam"
+                                    class="p-2.5 bg-[#88A68B] text-white rounded-xl hover:bg-[#4D6B53] transition-colors"
+                                    title="Compare parameters">
+                                    <iconify-icon icon="lucide:plus"></iconify-icon>
+                                </button>
+                            </div>
+                        </div>
+                        <!-- Active param chips -->
+                        <div id="activeParamChips" class="flex flex-wrap gap-2 mb-4"></div>
+                        <div class="h-[360px]">
+                            <canvas id="expandedTrendsChart"></canvas>
+                        </div>
+                        <!-- No data state -->
+                        <div id="trendsNoData" class="hidden flex-col items-center py-16 text-center">
+                            <iconify-icon icon="lucide:bar-chart-3" class="text-5xl text-[#E8E1D5] mb-4"></iconify-icon>
+                            <p class="font-bold text-[#6D726D]">No trend data yet</p>
+                            <p class="text-sm text-[#B8BFB8] mt-1">Upload lab reports to start seeing your biomarker
+                                trends</p>
+                            <a href="labreports.html"
+                                class="mt-4 px-5 py-2.5 bg-[#88A68B] text-white rounded-2xl font-bold text-sm hover:bg-[#4D6B53] transition-colors inline-flex items-center gap-2">
+                                <iconify-icon icon="lucide:upload"></iconify-icon>
+                                Upload Lab Report
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Risk Radar Chart -->
+                    <div class="lg:col-span-4 bg-white rounded-[40px] p-8 shadow-sm border border-[#F5EFE6]">
+                        <h3 class="text-xl font-bold text-[#2D302D] mb-2">Risk Profile Matrix</h3>
+                        <p class="text-xs text-[#6D726D] mb-4">Based on abnormal biomarker counts</p>
+                        <div class="h-[260px]">
+                            <canvas id="riskRadarChart"></canvas>
+                        </div>
+                        <!-- Risk Summary -->
+                        <div id="riskSummaryList" class="mt-4 space-y-2"></div>
+                    </div>
+                </section>
+
+                <!-- Individual Parameter History Cards -->
+                <section>
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="text-2xl font-bold text-[#2D302D]">Parameter History</h3>
+                        <button id="btnRefreshParams"
+                            class="flex items-center gap-1 text-sm text-[#88A68B] font-bold hover:underline">
+                            <iconify-icon icon="lucide:refresh-cw" class="text-sm"></iconify-icon>
+                            Refresh
+                        </button>
+                    </div>
+                    <div id="parameterCards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Loading state -->
+                        <div class="col-span-full flex items-center justify-center py-12 text-[#B8BFB8]">
+                            <iconify-icon icon="lucide:loader-2" class="text-2xl spin mr-2"></iconify-icon>
+                            <span class="text-sm">Loading your biomarker history…</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Reports History -->
+                <section class="bg-white rounded-[40px] p-8 shadow-sm border border-[#F5EFE6]">
+                    <h3 class="text-xl font-bold text-[#2D302D] mb-6 flex items-center gap-2">
+                        <iconify-icon icon="lucide:clock" class="text-[#E8B86D]"></iconify-icon>
+                        Lab Report History
+                    </h3>
+                    <div id="reportHistoryList">
+                        <div class="flex items-center justify-center py-6 text-[#B8BFB8]">
+                            <iconify-icon icon="lucide:loader-2" class="text-xl spin mr-2"></iconify-icon>
+                            <span class="text-sm">Loading…</span>
+                        </div>
+                    </div>
+                </section>
+
             </div>
+        </main>
+    </div>
 
-            <div class="panel">
-                <canvas id="trendChart" height="200"></canvas>
+    <script>
+        const API_BASE = localStorage.getItem('apiBase') || 'http://127.0.0.1:8000';
+
+        // Color palette for multiple parameters
+        const PARAM_COLORS = ['#88A68B', '#E8B86D', '#D47B5A', '#A8D5E2', '#B85C3C', '#6B9F6F', '#D4A5A5'];
+
+        let expandedTrendsChartInst = null;
+        let riskRadarChartInst = null;
+        let allParams = [];
+        let activeParams = [];
+        let paramDataCache = {};
+
+        // ============ LOAD PARAMETERS FROM API ============
+        async function loadAllParams() {
+            try {
+                const res = await fetch(`${API_BASE}/trends`);
+                if (!res.ok) throw new Error('Failed');
+                const data = await res.json();
+                allParams = data.parameters || data || [];
+                if (!Array.isArray(allParams) || allParams.length === 0) {
+                    showNoData();
+                    return;
+                }
+                populateParamSelector(allParams);
+                // Load data for all parameters
+                await loadAllParamData(allParams.slice(0, 8)); // limit to 8 for performance
+                renderBiomarkerCards();
+                computeAndRenderScore();
+                renderRadarChart();
+                renderParamCards();
+                // Auto-select first 2 parameters for line chart
+                activeParams = allParams.slice(0, Math.min(2, allParams.length));
+                renderActiveChips();
+                renderTrendsChart();
+            } catch (e) {
+                showNoData();
+            }
+        }
+
+        function showNoData() {
+            document.getElementById('scoreValue').textContent = '—';
+            document.getElementById('scoreGrade').textContent = 'No data';
+            document.getElementById('scoreSubtext').innerHTML = 'Upload a lab report to track your health trends.';
+            document.getElementById('biomarkerCards').innerHTML = `
+        <div class="col-span-2 md:col-span-4 bg-[#FDFBF7] rounded-2xl p-6 border border-[#F5EFE6] text-center">
+            <iconify-icon icon="lucide:microscope" class="text-4xl text-[#E8E1D5] mb-3 block"></iconify-icon>
+            <p class="text-[#6D726D] font-medium">No lab data available</p>
+            <a href="labreports.html" class="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-[#88A68B] text-white rounded-xl font-bold text-sm hover:bg-[#4D6B53] transition-colors">
+                <iconify-icon icon="lucide:upload" class="text-sm"></iconify-icon> Upload Lab Report
+            </a>
+        </div>`;
+            document.getElementById('parameterCards').innerHTML = `
+        <div class="col-span-full text-center py-10 text-[#6D726D]">
+            <iconify-icon icon="lucide:bar-chart-3" class="text-4xl text-[#E8E1D5] mb-3 block"></iconify-icon>
+            No biomarker data found. Upload a lab report to see trends.
+        </div>`;
+            document.getElementById('reportHistoryList').innerHTML = `<p class="text-sm text-[#6D726D] text-center py-4">No reports saved yet.</p>`;
+            // Show no data state on chart
+            document.getElementById('expandedTrendsChart').parentElement.style.display = 'none';
+            document.getElementById('trendsNoData').classList.remove('hidden');
+            document.getElementById('trendsNoData').style.display = 'flex';
+        }
+
+        async function loadAllParamData(params) {
+            await Promise.all(params.map(async (param) => {
+                try {
+                    const res = await fetch(`${API_BASE}/trends/${encodeURIComponent(param)}`);
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    paramDataCache[param] = data;
+                } catch (e) {
+                    console.warn('Failed to load trend for', param, e);
+                }
+            }));
+        }
+
+        function populateParamSelector(params) {
+            const sel = document.getElementById('paramSelector');
+            sel.innerHTML = params.map(p => `<option value="${p}">${p}</option>`).join('');
+            sel.addEventListener('change', () => {
+                const selected = sel.value;
+                if (selected && !activeParams.includes(selected)) {
+                    // Load data if not cached
+                    if (!paramDataCache[selected]) {
+                        fetch(`${API_BASE}/trends/${encodeURIComponent(selected)}`).then(r => r.json()).then(d => {
+                            paramDataCache[selected] = d;
+                            addActiveParam(selected);
+                        }).catch(() => addActiveParam(selected));
+                    } else {
+                        addActiveParam(selected);
+                    }
+                }
+            });
+        }
+
+        document.getElementById('btnAddParam').addEventListener('click', () => {
+            const sel = document.getElementById('paramSelector');
+            const selected = sel.value;
+            if (selected && !activeParams.includes(selected)) {
+                if (!paramDataCache[selected]) {
+                    fetch(`${API_BASE}/trends/${encodeURIComponent(selected)}`).then(r => r.json()).then(d => {
+                        paramDataCache[selected] = d;
+                        addActiveParam(selected);
+                    });
+                } else {
+                    addActiveParam(selected);
+                }
+            }
+        });
+
+        function addActiveParam(param) {
+            if (!activeParams.includes(param) && activeParams.length < 6) {
+                activeParams.push(param);
+                renderActiveChips();
+                renderTrendsChart();
+            }
+        }
+
+        function renderActiveChips() {
+            const container = document.getElementById('activeParamChips');
+            container.innerHTML = activeParams.map((p, i) => {
+                const color = PARAM_COLORS[i % PARAM_COLORS.length];
+                return `<span class="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-white" style="background:${color}">
+            ${p}
+            <button onclick="removeParam('${p}')" class="hover:opacity-70 ml-1 text-white leading-none">×</button>
+        </span>`;
+            }).join('');
+        }
+
+        window.removeParam = function (param) {
+            activeParams = activeParams.filter(p => p !== param);
+            renderActiveChips();
+            renderTrendsChart();
+        };
+
+        // ============ MAIN TRENDS LINE CHART ============
+        function renderTrendsChart() {
+            const ctx = document.getElementById('expandedTrendsChart').getContext('2d');
+            document.getElementById('expandedTrendsChart').parentElement.style.display = 'block';
+            document.getElementById('trendsNoData').style.display = 'none';
+
+            const datasets = activeParams.map((param, i) => {
+                const color = PARAM_COLORS[i % PARAM_COLORS.length];
+                const raw = paramDataCache[param];
+                const entries = Array.isArray(raw) ? raw : (raw?.history || raw?.data || []);
+                const points = entries.map(e => ({ x: e.timestamp ? e.timestamp.split('T')[0] : null, y: parseFloat(e.value) }))
+                    .filter(p => p.x && !isNaN(p.y))
+                    .sort((a, b) => new Date(a.x) - new Date(b.x));
+
+                return {
+                    label: param,
+                    data: points.length > 0 ? points : [{ x: new Date().toISOString().split('T')[0], y: 0 }],
+                    borderColor: color,
+                    backgroundColor: color + '15',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: i === 0,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointBackgroundColor: color,
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 2,
+                };
+            });
+
+            if (expandedTrendsChartInst) expandedTrendsChartInst.destroy();
+
+            if (datasets.length === 0) {
+                document.getElementById('expandedTrendsChart').parentElement.style.display = 'none';
+                document.getElementById('trendsNoData').style.display = 'flex';
+                return;
+            }
+
+            // Determine if dates look like date strings or just labels
+            const firstData = datasets[0]?.data || [];
+            const useDateAxis = firstData.length > 0 && /\d{4}-\d{2}-\d{2}/.test(String(firstData[0]?.x));
+
+            expandedTrendsChartInst = new Chart(ctx, {
+                type: 'line',
+                data: { datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'top', align: 'end', labels: { usePointStyle: true, font: { family: 'Satoshi' }, padding: 16 } },
+                        tooltip: { callbacks: { title: items => items[0]?.label || '' } }
+                    },
+                    scales: {
+                        x: useDateAxis ? {
+                            type: 'time',
+                            time: { unit: 'month', tooltipFormat: 'MMM d, yyyy', displayFormats: { month: 'MMM yyyy' } },
+                            grid: { display: false },
+                            ticks: { font: { family: 'Satoshi' } }
+                        } : {
+                            grid: { display: false },
+                            ticks: { font: { family: 'Satoshi' } }
+                        },
+                        y: {
+                            grid: { color: '#F5EFE6' },
+                            ticks: { font: { family: 'Satoshi' } }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============ BIOMARKER SUMMARY CARDS ============
+        function renderBiomarkerCards() {
+            const container = document.getElementById('biomarkerCards');
+            // Get most recent value for each parameter (up to 4)
+            const params = Object.keys(paramDataCache).slice(0, 4);
+            if (params.length === 0) {
+                container.innerHTML = `<div class="col-span-2 md:col-span-4 text-center text-sm text-[#6D726D] py-4">No data yet.</div>`;
+                return;
+            }
+
+            let html = '';
+            for (const param of params) {
+                const raw = paramDataCache[param];
+                const entries = Array.isArray(raw) ? raw : (raw?.history || raw?.data || []);
+                if (entries.length === 0) continue;
+                const sorted = [...entries].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                const latest = sorted[0];
+                const prev = sorted[1];
+                const val = parseFloat(latest.value);
+                const prevVal = prev ? parseFloat(prev.value) : null;
+                const diff = prevVal !== null ? val - prevVal : null;
+                const trend = diff === null ? '' : diff > 0 ? '↑' : diff < 0 ? '↓' : '→';
+                const trendColor = diff === null ? '' : diff > 0 ? 'text-[#D47B5A]' : 'text-[#4D6B53]';
+                // Derive status from risk_percent
+                const riskPct = latest.risk_percent || 0;
+                const status = riskPct >= 70 ? 'High Risk' : riskPct >= 40 ? 'Borderline' : 'Normal';
+                const statusColor = riskPct >= 70 ? '#D47B5A' : riskPct >= 40 ? '#E8B86D' : '#88A68B';
+                const unit = latest.unit || '';
+
+                html += `
+        <div class="bg-white rounded-[28px] p-5 border border-[#F5EFE6] card-hover">
+            <p class="text-[10px] font-bold text-[#8B7355] uppercase tracking-widest mb-2">${param}</p>
+            <p class="text-2xl font-bold text-[#2D302D] mb-1">${val}${unit ? '<span class="text-sm font-normal text-[#8B7355] ml-1">' + unit + '</span>' : ''}</p>
+            <div class="flex items-center justify-between">
+                ${diff !== null ? `<span class="text-xs font-bold ${trendColor}">${trend} ${Math.abs(diff).toFixed(1)} ${unit}</span>` : '<span></span>'}
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full" style="background:${statusColor}20; color:${statusColor}">${status}</span>
             </div>
-            <p id="trendStatus"></p>
-        </section>
-    </main>
+        </div>`;
+            }
+            container.innerHTML = html || `<div class="col-span-2 md:col-span-4 text-center text-sm text-[#6D726D] py-4">Loading data…</div>`;
+        }
 
-    <footer>
-        <small>Tip: Run your API with <code>uvicorn test.app:app --reload</code></small>
-    </footer>
+        // ============ HEALTH SCORE GAUGE ============
+        function computeAndRenderScore() {
+            // Compute a wellness score based on risk_percent across all biomarker entries
+            let totalRisk = 0, count = 0;
+            for (const raw of Object.values(paramDataCache)) {
+                const entries = Array.isArray(raw) ? raw : (raw?.history || raw?.data || []);
+                for (const e of entries) {
+                    count++;
+                    totalRisk += (e.risk_percent || 0);
+                }
+            }
+            const avgRisk = count > 0 ? totalRisk / count : 30;
+            // Convert to 0-100 score (lower avg risk = higher wellness score)
+            const displayScore = Math.max(0, Math.min(100, Math.round(100 - avgRisk)));
+            const grade = displayScore >= 90 ? 'Grade A+' : displayScore >= 80 ? 'Grade A' : displayScore >= 70 ? 'Grade B' : displayScore >= 60 ? 'Grade C' : 'Grade D';
+            const circumference = 427; // 2π×68
+            const offset = circumference - (displayScore / 100) * circumference;
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.1/dist/chartjs-adapter-moment.min.js"></script>
-    <script src="app.js"></script>
+            document.getElementById('scoreValue').textContent = displayScore;
+            document.getElementById('scoreGrade').textContent = grade;
+            document.getElementById('scoreGaugeCircle').setAttribute('stroke-dashoffset', offset);
+
+            const paramCount = Object.keys(paramDataCache).length;
+            document.getElementById('scoreSubtext').innerHTML = `
+        <iconify-icon icon="lucide:activity" class="mr-1"></iconify-icon>
+        Tracking <strong>${paramCount}</strong> biomarker${paramCount !== 1 ? 's' : ''} · Avg risk score: ${Math.round(avgRisk)}%`;
+        }
+
+        // ============ RISK RADAR CHART ============
+        function renderRadarChart() {
+            // Compute risk scores per system based on abnormal biomarkers
+            const riskCategories = {
+                'Metabolic': ['glucose', 'blood sugar', 'hba1c', 'a1c', 'insulin', 'fasting glucose'],
+                'Liver': ['alt', 'ast', 'sgpt', 'sgot', 'bilirubin', 'alp', 'alkaline phosphatase'],
+                'Kidney': ['creatinine', 'urea', 'bun', 'egfr', 'uric acid'],
+                'Cardiac': ['cholesterol', 'ldl', 'hdl', 'triglycerides', 'crp', 'troponin'],
+                'Thyroid': ['tsh', 't3', 't4', 'free t4', 'free t3'],
+                'Blood': ['hemoglobin', 'hb', 'rbc', 'wbc', 'platelet', 'hematocrit', 'mcv', 'mch']
+            };
+
+            const scores = {};
+            for (const [category, keywords] of Object.entries(riskCategories)) {
+                let total = 0, abnormal = 0;
+                for (const [param, raw] of Object.entries(paramDataCache)) {
+                    const paramLower = param.toLowerCase();
+                    if (keywords.some(kw => paramLower.includes(kw))) {
+                        const entries = Array.isArray(raw) ? raw : (raw?.history || raw?.data || []);
+                        for (const e of entries) {
+                            total++;
+                            if ((e.risk_percent || 0) >= 40) abnormal++; // 40%+ risk = abnormal
+                        }
+                    }
+                }
+                // Convert to "health score" (inverted risk, 0-100, higher = healthier)
+                scores[category] = total > 0 ? Math.round(((total - abnormal) / total) * 100) : 75;
+            }
+
+            const labels = Object.keys(scores);
+            const values = Object.values(scores);
+
+            const radarCtx = document.getElementById('riskRadarChart').getContext('2d');
+            if (riskRadarChartInst) riskRadarChartInst.destroy();
+            riskRadarChartInst = new Chart(radarCtx, {
+                type: 'radar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Health Score per System',
+                        data: values,
+                        fill: true,
+                        backgroundColor: 'rgba(136,166,139,0.2)',
+                        borderColor: '#88A68B',
+                        pointBackgroundColor: '#88A68B',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: '#88A68B'
+                    }]
+                },
+                options: {
+                    elements: { line: { borderWidth: 3 } },
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        r: {
+                            angleLines: { color: '#F5EFE6' },
+                            grid: { color: '#F5EFE6' },
+                            suggestedMin: 0, suggestedMax: 100,
+                            ticks: { display: false }
+                        }
+                    }
+                }
+            });
+
+            // Risk summary items - show lowest scoring ones (highest risk)
+            const sorted = labels.map((l, i) => ({ label: l, score: values[i] }))
+                .sort((a, b) => a.score - b.score).slice(0, 3);
+            const riskList = document.getElementById('riskSummaryList');
+            riskList.innerHTML = sorted.map(s => {
+                const color = s.score >= 80 ? '#88A68B' : s.score >= 60 ? '#E8B86D' : '#D47B5A';
+                const label = s.score >= 80 ? 'Low Risk' : s.score >= 60 ? 'Moderate' : 'Needs Attention';
+                return `<div class="flex items-center justify-between p-3 bg-[#FDFBF7] rounded-2xl">
+            <div class="flex items-center gap-2">
+                <div class="w-2 h-2 rounded-full" style="background:${color}"></div>
+                <span class="text-sm font-medium">${s.label}</span>
+            </div>
+            <span class="text-xs font-bold" style="color:${color}">${label} (${s.score}%)</span>
+        </div>`;
+            }).join('');
+        }
+
+        // ============ INDIVIDUAL PARAMETER CARDS ============
+        async function renderParamCards() {
+            const container = document.getElementById('parameterCards');
+            if (allParams.length === 0) { container.innerHTML = ''; return; }
+
+            // Ensure data is cached for parameters we want to show
+            const missingParams = allParams.filter(p => !paramDataCache[p]);
+            if (missingParams.length > 0) {
+                await loadAllParamData(missingParams.slice(0, 5));
+            }
+
+            let allHtml = '';
+            for (const param of allParams) {
+                const raw = paramDataCache[param];
+                if (!raw) continue;
+                const entries = Array.isArray(raw) ? raw : (raw?.history || raw?.data || []);
+                if (entries.length === 0) continue;
+                const sorted = [...entries].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+                const latest = sorted[sorted.length - 1];
+                const val = parseFloat(latest.value);
+                const unit = latest.unit || '';
+                const riskPct = latest.risk_percent || 0;
+                const status = riskPct >= 70 ? 'High Risk' : riskPct >= 40 ? 'Borderline' : 'Normal';
+                const statusColor = riskPct >= 70 ? '#D47B5A' : riskPct >= 40 ? '#E8B86D' : '#88A68B';
+
+                // Compute trend direction
+                let trendHtml = '';
+                if (sorted.length >= 2) {
+                    const first = parseFloat(sorted[0].value);
+                    const diff = val - first;
+                    const pct = first !== 0 ? Math.abs((diff / first) * 100).toFixed(1) : 0;
+                    const up = diff > 0;
+                    const icon = up ? 'lucide:trending-up' : 'lucide:trending-down';
+                    const color = up ? '#D47B5A' : '#4D6B53';
+                    trendHtml = `<span class="text-xs font-bold flex items-center gap-1" style="color:${color}">
+                <iconify-icon icon="${icon}" class="text-xs"></iconify-icon> ${pct}% (${sorted.length} readings)
+            </span>`;
+                } else {
+                    trendHtml = `<span class="text-xs text-[#8B7355]">${entries.length} reading${entries.length !== 1 ? 's' : ''}</span>`;
+                }
+
+                // Mini sparkline data for visual
+                const sparkValues = sorted.map(e => parseFloat(e.value)).filter(v => !isNaN(v));
+                const canvasId = 'spark_' + param.replace(/[^a-z0-9]/gi, '_');
+
+                allHtml += `
+        <div class="bg-white rounded-[32px] p-6 border border-[#F5EFE6] card-hover">
+            <div class="flex items-start justify-between mb-4">
+                <div>
+                    <p class="text-[10px] font-bold text-[#8B7355] uppercase tracking-widest mb-1">${param}</p>
+                    <p class="text-2xl font-bold text-[#2D302D]">${val}<span class="text-sm font-normal text-[#8B7355] ml-1">${unit}</span></p>
+                </div>
+                ${status ? `<span class="text-[10px] font-bold px-3 py-1 rounded-full" style="background:${statusColor}15; color:${statusColor}">${status}</span>` : ''}
+            </div>
+            <div class="h-14 mb-3">
+                <canvas id="${canvasId}" height="56"></canvas>
+            </div>
+            <div class="flex items-center justify-between">
+                ${trendHtml}
+                <span class="text-[10px] text-[#B8BFB8]">Latest: ${latest.timestamp || '—'}</span>
+            </div>
+            ${latest.risk_reason ? `<p class="text-[10px] text-[#8B7355] mt-2 leading-relaxed">${latest.risk_reason}</p>` : ''}
+        </div>`;
+
+                // Render sparkline after DOM update
+                setTimeout(() => {
+                    const sparkCanvas = document.getElementById(canvasId);
+                    if (!sparkCanvas || sparkValues.length < 2) return;
+                    const rp = latest.risk_percent || 0;
+                    const color = rp >= 70 ? '#D47B5A' : rp >= 40 ? '#E8B86D' : '#88A68B';
+                    new Chart(sparkCanvas.getContext('2d'), {
+                        type: 'line',
+                        data: {
+                            labels: sparkValues.map((_, i) => i + 1),
+                            datasets: [{ data: sparkValues, borderColor: color, backgroundColor: color + '20', borderWidth: 2, tension: 0.4, fill: true, pointRadius: 2 }]
+                        },
+                        options: {
+                            responsive: true, maintainAspectRatio: false,
+                            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                            scales: { x: { display: false }, y: { display: false } }
+                        }
+                    });
+                }, 100);
+            }
+
+            container.innerHTML = allHtml || `<div class="col-span-full text-center py-8 text-[#6D726D]">No biomarker history found.</div>`;
+        }
+
+        // ============ REPORTS HISTORY ============
+        async function loadReportHistory() {
+            const container = document.getElementById('reportHistoryList');
+            try {
+                const res = await fetch(`${API_BASE}/reports/history`);
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                // /reports/history returns list of saved reports
+                const reports = Array.isArray(data) ? data : (data.reports || []);
+                if (reports.length === 0) {
+                    container.innerHTML = `<p class="text-sm text-center text-[#6D726D] py-4">No reports saved yet. <a href="labreports.html" class="text-[#88A68B] font-bold underline">Upload one</a></p>`;
+                    return;
+                }
+                container.innerHTML = reports.map(r => {
+                    const created = r.created_at ? new Date(r.created_at).toLocaleDateString() : '—';
+                    return `<div class="flex items-start gap-4 p-4 bg-[#FDFBF7] rounded-2xl border border-[#F5EFE6] mb-3 hover:border-[#88A68B] transition-colors">
+                <div class="w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 bg-[#88A68B]/10">
+                    <iconify-icon icon="lucide:file-text" class="text-[#88A68B] text-lg"></iconify-icon>
+                </div>
+                <div class="flex-1">
+                    <h4 class="font-bold text-sm text-[#2D302D]">Lab Report</h4>
+                    <p class="text-xs text-[#6D726D]">${created}</p>
+                    <p class="text-[10px] text-[#8B7355] mt-1 line-clamp-2">${(r.summary || '').slice(0, 120)}${r.summary && r.summary.length > 120 ? '…' : ''}</p>
+                </div>
+            </div>`;
+                }).join('');
+            } catch {
+                container.innerHTML = `<p class="text-sm text-center text-[#6D726D] py-4">Could not load reports.</p>`;
+            }
+        }
+
+        document.getElementById('btnRefreshParams').addEventListener('click', () => {
+            paramDataCache = {};
+            activeParams = [];
+            loadAllParams();
+            loadReportHistory();
+        });
+
+        // ============ BOOT ============
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAllParams();
+            loadReportHistory();
+        });
+    </script>
 </body>
 
 </html>

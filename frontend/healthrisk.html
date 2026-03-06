@@ -25,17 +25,20 @@
 
   <main>
     <section class="card">
-      <h2>Analyze Health Risk</h2>
-      <form id="formHealthRisk">
-        <input type="file" name="file" accept="image/*,.pdf" required />
+      <h2 style="margin-bottom: 0.5rem;">Analyze Health Risk</h2>
+      <p style="margin-bottom: 1.5rem;">Upload a lab report image or PDF to assess potential health risks.</p>
+      <form id="formHealthRisk"
+        style="display: flex; gap: 1rem; flex-wrap: wrap; align-items: center; margin-bottom: 2rem;">
+        <input type="file" name="file" accept="image/*,.pdf" required style="flex-grow: 1; max-width: 400px;" />
         <button type="submit">Analyze</button>
       </form>
-      <div class="panel">
-        <h3>Risk Dashboard</h3>
+      <div class="panel" style="margin-bottom: 1.5rem;">
+        <h3 style="margin-top: 0;">Risk Dashboard</h3>
         <canvas id="riskChart" height="200"></canvas>
       </div>
-      <div id="viewHealthRisk" class="view hidden"></div>
-      <button id="btnSaveReport" class="hidden" style="margin-top: 1rem; background-color: #28a745;">Save Report to
+      <div id="viewHealthRisk" class="view hidden" style="margin-bottom: 1.5rem;"></div>
+      <button id="btnSaveReport" class="hidden" style="margin-bottom: 1.5rem; background: var(--olive-dark);">Save
+        Report to
         History</button>
       <pre id="outHealthRisk" class="output"></pre>
     </section>

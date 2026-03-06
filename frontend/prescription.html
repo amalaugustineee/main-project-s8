@@ -1,45 +1,568 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Prescription | Medical Intelligence</title>
-  <link rel="stylesheet" href="styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vitality | Medicine & Pharmacy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link href="https://api.fontshare.com/v2/css?f[]=outfit@300,400,500,600,700&f[]=satoshi@400,500,700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --color-cream: #FDFBF7;
+            --color-sage: #88A68B;
+            --color-sage-dark: #4D6B53;
+            --color-terracotta: #D47B5A;
+            --color-mustard: #E8B86D;
+            --color-beige: #F5EFE6;
+        }
+
+        body {
+            font-family: 'Satoshi', sans-serif;
+            background-color: var(--color-cream);
+            color: #2D302D;
+            margin: 0;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .organic-shape {
+            border-radius: 63% 37% 30% 70% / 50% 45% 55% 50%;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #E5E1D8;
+            border-radius: 10px;
+        }
+
+        .pill-animation:hover {
+            transform: scale(1.05) rotate(2deg);
+            transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .matrix-cell {
+            transition: all 0.2s ease;
+        }
+
+        .matrix-cell:hover {
+            filter: brightness(0.95);
+            transform: scale(1.1);
+            z-index: 10;
+        }
+
+        @view-transition {
+            navigation: auto;
+        }
+    </style>
 </head>
 
 <body>
-  <header>
-    <div>
-      <h1>Prescription Analysis</h1>
-      <p style="margin:0; opacity:0.7; font-size:0.9rem;">Extract Medicines from Notes</p>
+    <div class="flex min-h-screen bg-[#FDFBF7] overflow-hidden">
+        <!-- Persistent Sidebar -->
+        <!-- component: SidebarNavigation (482201fb-3a8b-4224-93ab-917c0aa1c0ca) -->
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+      <style>
+        .sidebar {
+          width: 220px;
+          background: linear-gradient(160deg, #F5EFE6 0%, #F0EBE0 100%);
+          border-right: 1px solid #E8E1D5;
+          display: flex;
+          flex-direction: column;
+          padding: 20px 14px;
+          height: 100vh;
+          position: sticky;
+          top: 0;
+          flex-shrink: 0;
+          z-index: 50;
+        }
+        .sidebar-logo {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 24px;
+          padding: 0 4px;
+        }
+        .sidebar-logo-icon {
+          width: 40px; height: 40px;
+          background: linear-gradient(135deg, #88A68B 0%, #4D6B53 100%);
+          border-radius: 14px;
+          display: flex; align-items: center; justify-content: center;
+          color: white; font-size: 20px;
+          box-shadow: 0 4px 12px rgba(77,107,83,0.3);
+          flex-shrink: 0;
+        }
+        .sidebar-logo-text {
+          font-family: 'Outfit', sans-serif;
+          font-size: 18px;
+          font-weight: 700;
+          color: #4D6B53;
+          letter-spacing: -0.3px;
+        }
+        .sidebar-logo-sub {
+          font-size: 9px;
+          color: #8B9E8C;
+          font-family: 'Satoshi', sans-serif;
+          font-weight: 500;
+          text-transform: uppercase;
+          letter-spacing: 0.8px;
+          margin-top: -2px;
+        }
+        .nav-section-label {
+          font-size: 9px;
+          font-weight: 700;
+          color: #B5AEA3;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          padding: 0 8px;
+          margin: 4px 0 6px;
+        }
+        .nav-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 9px 10px;
+          border-radius: 16px;
+          text-decoration: none;
+          color: #6D726D;
+          position: relative;
+          transition: all 0.2s ease;
+          margin-bottom: 3px;
+          font-family: 'Satoshi', sans-serif;
+          font-size: 13px;
+          font-weight: 500;
+        }
+        .nav-active {
+          font-weight: 700;
+        }
+        .nav-icon {
+          width: 30px; height: 30px;
+          border-radius: 10px;
+          display: flex; align-items: center; justify-content: center;
+          color: white;
+          font-size: 14px;
+          flex-shrink: 0;
+          transition: background 0.2s;
+        }
+        .nav-label {
+          flex: 1;
+          transition: color 0.2s;
+        }
+        .nav-dot {
+          width: 6px; height: 6px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+        .sidebar-footer {
+          margin-top: auto;
+          padding: 12px 8px 0;
+          border-top: 1px solid #E8E1D5;
+        }
+        .sidebar-badge {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px;
+          background: linear-gradient(135deg, rgba(136,166,139,0.15) 0%, rgba(77,107,83,0.08) 100%);
+          border-radius: 14px;
+          border: 1px solid rgba(136,166,139,0.2);
+        }
+        .sidebar-badge-icon {
+          width: 28px; height: 28px;
+          background: linear-gradient(135deg, #88A68B 0%, #4D6B53 100%);
+          border-radius: 8px;
+          display: flex; align-items: center; justify-content: center;
+          color: white; font-size: 12px; flex-shrink: 0;
+        }
+        .sidebar-badge-text {
+          font-size: 10px; line-height: 1.4;
+          font-family: 'Satoshi', sans-serif;
+        }
+        .sidebar-badge-text strong {
+          display: block; color: #4D6B53; font-weight: 700; font-size: 10.5px;
+        }
+        .sidebar-badge-text span {
+          color: #8B9E8C;
+        }
+      </style>
+
+      <!-- Logo -->
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">
+          <iconify-icon icon="lucide:heart-pulse"></iconify-icon>
+        </div>
+        <div>
+          <div class="sidebar-logo-text">Vitality</div>
+          <div class="sidebar-logo-sub">Health AI</div>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <div class="nav-section-label">Navigation</div>
+      <nav style="flex:1">
+        <a href="index.html" class="nav-item" data-color="#7C6EBA" data-bg="#EDE9F9"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:layout-dashboard"></iconify-icon>
+          </span>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a href="prescription.html" class="nav-item nav-active" style="background:#FBF0EC; color:#D47B5A">
+          <span class="nav-icon" style="background:#D47B5A">
+            <iconify-icon icon="lucide:pill"></iconify-icon>
+          </span>
+          <span class="nav-label">Prescriptions</span>
+          <span class="nav-dot" style="background:#D47B5A"></span>
+        </a>
+        <a href="labreports.html" class="nav-item" data-color="#5B8DB8" data-bg="#EBF3FA"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:microscope"></iconify-icon>
+          </span>
+          <span class="nav-label">Lab Reports</span>
+        </a>
+        <a href="diet.html" class="nav-item" data-color="#88A68B" data-bg="#EDF3EE"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:salad"></iconify-icon>
+          </span>
+          <span class="nav-label">Meal Planner</span>
+        </a>
+        <a href="trends.html" class="nav-item" data-color="#E8B86D" data-bg="#FDF5E8"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:trending-up"></iconify-icon>
+          </span>
+          <span class="nav-label">Trends</span>
+        </a>
+        <a href="summary.html" class="nav-item" data-color="#4D9B8A" data-bg="#E8F5F3"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:shield-check"></iconify-icon>
+          </span>
+          <span class="nav-label">Health Summary</span>
+        </a>
+      </nav>
+
+      <!-- Footer badge -->
+      <div class="sidebar-footer">
+        <div class="sidebar-badge">
+          <div class="sidebar-badge-icon">
+            <iconify-icon icon="lucide:sparkles"></iconify-icon>
+          </div>
+          <div class="sidebar-badge-text">
+            <strong>AI Powered</strong>
+            <span>Local LLM · Private</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+        <main class="flex-1 flex flex-col p-8 relative overflow-y-auto custom-scrollbar">
+            <!-- Page Header -->
+            <header class="flex items-center justify-between mb-8">
+                <div>
+                    <h1 class="text-3xl font-bold text-[#2D302D] mb-1">Prescriptions</h1>
+                    <p class="text-[#6D726D]">Upload and manage your prescriptions.</p>
+                </div>
+                <a href="labreports.html"
+                    class="flex items-center gap-2 px-5 py-2.5 bg-[#88A68B] text-white rounded-2xl font-bold text-sm hover:bg-[#4D6B53] transition-all shadow-md">
+                    <iconify-icon icon="lucide:microscope"></iconify-icon>
+                    Lab Reports
+                </a>
+            </header>
+
+            <div class="grid grid-cols-12 gap-8 max-w-6xl mx-auto w-full">
+                <!-- Upload Card -->
+                <div class="col-span-12 lg:col-span-5 space-y-6">
+                    <section class="bg-white rounded-[40px] p-8 shadow-sm border border-[#F5EFE6]">
+                        <h2 class="text-xl font-bold text-[#2D302D] mb-2 flex items-center gap-2">
+                            <iconify-icon icon="lucide:upload" class="text-[#88A68B]"></iconify-icon>
+                            Upload Prescription
+                        </h2>
+                        <p class="text-sm text-[#6D726D] mb-5">Drop a prescription image or PDF. AI will extract
+                            medicine details.</p>
+
+                        <!-- Drop Zone -->
+                        <div id="prescDropZone" class="upload-zone rounded-2xl p-8 text-center cursor-pointer mb-4">
+                            <iconify-icon icon="lucide:file-text"
+                                class="text-5xl text-[#88A68B]/40 mb-3 block"></iconify-icon>
+                            <p class="font-bold text-[#4D6B53] mb-1">Drop prescription here</p>
+                            <p class="text-sm text-[#6D726D] mb-4">JPG, PNG, PDF supported</p>
+                            <input type="file" id="prescFileInput" accept="image/*,.pdf" class="hidden">
+                            <button type="button" id="btnPrescBrowse"
+                                class="px-5 py-2 bg-[#88A68B] text-white rounded-2xl font-bold text-sm hover:bg-[#4D6B53] transition-colors">
+                                Browse File
+                            </button>
+                            <p id="prescFileName" class="mt-3 text-sm font-medium text-[#4D6B53] hidden"></p>
+                        </div>
+
+                        <button id="btnAnalyzePresc"
+                            class="w-full py-3.5 bg-[#4D6B53] hover:bg-[#88A68B] text-white rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2 disability:opacity-60 disabled:cursor-not-allowed shadow-lg">
+                            <iconify-icon icon="lucide:sparkles"></iconify-icon>
+                            Extract Medicine Details
+                        </button>
+                    </section>
+
+                    <!-- Analysis Result Panel -->
+                    <section id="prescAnalysisSection"
+                        class="hidden bg-white rounded-[40px] p-8 shadow-sm border border-[#F5EFE6]">
+                        <div id="prescAnalysisResult"></div>
+                    </section>
+                </div>
+
+                <!-- History Column -->
+                <div class="col-span-12 lg:col-span-7 space-y-6">
+                    <section class="bg-white rounded-[40px] p-8 shadow-sm border border-[#F5EFE6]">
+                        <div class="flex items-center justify-between mb-6">
+                            <h2 class="text-xl font-bold text-[#2D302D] flex items-center gap-2">
+                                <iconify-icon icon="lucide:clock" class="text-[#E8B86D]"></iconify-icon>
+                                Upcoming Doses
+                            </h2>
+                            <button id="btnRefreshHistory"
+                                class="text-sm text-[#88A68B] font-bold hover:underline flex items-center gap-1">
+                                <iconify-icon icon="lucide:refresh-cw" class="text-sm"></iconify-icon>Refresh
+                            </button>
+                        </div>
+                        <div id="prescriptionHistoryList">
+                            <div class="flex items-center justify-center py-8 text-[#B8BFB8]">
+                                <iconify-icon icon="lucide:loader-2" class="text-xl spin-anim mr-2"></iconify-icon>
+                                <span class="text-sm">Loading…</span>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
     </div>
-    <nav>
-      <a href="index.html">Home</a>
-      <a href="prescription.html" class="active">Prescription</a>
-      <a href="healthrisk.html">Risk</a>
-      <a href="diet.html">Diet</a>
-      <a href="summary.html">Summary</a>
-    </nav>
-  </header>
 
-  <main>
-    <section class="card">
-      <h2>Analyze Prescription</h2>
-      <form id="formPrescription">
-        <input type="file" name="file" accept="image/*,.pdf" required />
-        <button type="submit">Analyze</button>
-      </form>
-      <div id="viewPrescription" class="view hidden"></div>
-      <pre id="outPrescription" class="output"></pre>
-    </section>
-  </main>
+    <style>
+        .upload-zone {
+            border: 2px dashed #B8D4B9;
+            transition: all 0.2s;
+        }
 
-  <footer>
-    <small>Tip: Run your API with <code>uvicorn test.app:app --reload</code></small>
-  </footer>
+        .upload-zone:hover,
+        .upload-zone.drag-over {
+            border-color: #88A68B;
+            background: rgba(136, 166, 139, 0.05);
+        }
 
-  <script src="app.js?v=6"></script>
+        .upload-zone.drag-over {
+            transform: scale(1.01);
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spin-anim {
+            animation: spin 1s linear infinite;
+        }
+    </style>
+
+    <script>
+        const API_BASE = localStorage.getItem('apiBase') || 'http://127.0.0.1:8000';
+        let currentPrescFile = null;
+
+        // ---- Drop Zone ----
+        const prescDropZone = document.getElementById('prescDropZone');
+        const prescFileInput = document.getElementById('prescFileInput');
+        const prescFileName = document.getElementById('prescFileName');
+
+        document.getElementById('btnPrescBrowse').addEventListener('click', () => prescFileInput.click());
+        prescDropZone.addEventListener('dragover', e => { e.preventDefault(); prescDropZone.classList.add('drag-over'); });
+        prescDropZone.addEventListener('dragleave', () => prescDropZone.classList.remove('drag-over'));
+        prescDropZone.addEventListener('drop', e => {
+            e.preventDefault(); prescDropZone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+        });
+        prescFileInput.addEventListener('change', () => { if (prescFileInput.files.length) setFile(prescFileInput.files[0]); });
+
+        function setFile(f) {
+            currentPrescFile = f;
+            prescFileName.textContent = '📎 ' + f.name;
+            prescFileName.classList.remove('hidden');
+        }
+
+        // ---- Analyze ----
+        document.getElementById('btnAnalyzePresc').addEventListener('click', async () => {
+            if (!currentPrescFile) { alert('Please select a prescription file first.'); return; }
+            const btn = document.getElementById('btnAnalyzePresc');
+            const section = document.getElementById('prescAnalysisSection');
+            const resultDiv = document.getElementById('prescAnalysisResult');
+
+            btn.disabled = true;
+            btn.innerHTML = '<iconify-icon icon="lucide:loader-2" class="spin-anim"></iconify-icon> Analyzing…';
+            section.classList.remove('hidden');
+            resultDiv.innerHTML = `<div class="flex flex-col items-center py-8 text-center">
+                <iconify-icon icon="lucide:loader-2" class="text-3xl text-[#88A68B] spin-anim mb-3"></iconify-icon>
+                <p class="font-bold text-[#4D6B53]">AI is reading your prescription…</p>
+                <p class="text-xs text-[#6D726D] mt-1">This may take 20–30 seconds</p>
+            </div>`;
+            section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            const fd = new FormData();
+            fd.append('file', currentPrescFile);
+
+            try {
+                const res = await fetch(`${API_BASE}/prescription`, { method: 'POST', body: fd });
+                if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Analysis failed'); }
+                const data = await res.json();
+                renderPrescResult(data, resultDiv);
+                loadPrescriptionHistory();
+            } catch (err) {
+                resultDiv.innerHTML = `<div class="p-4 bg-red-50 rounded-2xl border border-red-100 text-red-700 text-sm">
+                    <iconify-icon icon="lucide:alert-circle" class="mr-1"></iconify-icon>${err.message}</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<iconify-icon icon="lucide:sparkles"></iconify-icon> Extract Medicine Details';
+            }
+        });
+
+        function renderPrescResult(data, container) {
+            const medicines = data.medicines || [];
+            const prescId = data.prescription_id;
+            const interactions = data.interactions;
+
+            let html = `<div class="space-y-4">`;
+
+            // Success header
+            html += `<div class="flex items-center gap-2 text-[#4D6B53] mb-2">
+                <iconify-icon icon="lucide:check-circle" class="text-xl"></iconify-icon>
+                <h3 class="font-bold">Prescription Extracted</h3>
+            </div>`;
+
+            // Doctor/Hospital chips
+            if (data.doctor_name || data.hospital_name) {
+                html += `<div class="flex gap-2 flex-wrap">
+                    ${data.doctor_name ? `<span class="flex items-center gap-1.5 px-3 py-1.5 bg-[#F5EFE6] rounded-xl text-xs font-bold text-[#4D6B53]">
+                        <iconify-icon icon="lucide:user" class="text-sm"></iconify-icon>Dr. ${data.doctor_name}</span>` : ''}
+                    ${data.hospital_name ? `<span class="flex items-center gap-1.5 px-3 py-1.5 bg-[#F5EFE6] rounded-xl text-xs text-[#6D726D]">
+                        <iconify-icon icon="lucide:building-2" class="text-sm"></iconify-icon>${data.hospital_name}</span>` : ''}
+                </div>`;
+            }
+
+            // Medicine list
+            if (medicines.length > 0) {
+                html += `<div>
+                    <p class="text-[10px] font-bold text-[#8B7355] uppercase tracking-widest mb-2">Medicines (${medicines.length})</p>
+                    <div class="space-y-2">`;
+                medicines.forEach(m => {
+                    const name = m.medicine || m.name || '—';
+                    html += `<div class="flex items-center gap-3 p-3 bg-[#FDFBF7] rounded-2xl border border-[#F5EFE6]">
+                        <div class="w-8 h-8 rounded-xl bg-[#88A68B]/10 flex items-center justify-center flex-shrink-0">
+                            <iconify-icon icon="lucide:pill" class="text-[#88A68B] text-sm"></iconify-icon>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-bold text-sm text-[#2D302D]">${name}</p>
+                            <div class="flex flex-wrap gap-1.5 mt-1">
+                                ${m.frequency ? `<span class="text-[10px] px-2 py-0.5 bg-[#88A68B]/10 text-[#4D6B53] rounded-full font-bold">${m.frequency}</span>` : ''}
+                                ${m.days ? `<span class="text-[10px] px-2 py-0.5 bg-[#E8B86D]/10 text-[#92400E] rounded-full font-bold">${m.days} days</span>` : ''}
+                                ${m.timings ? `<span class="text-[10px] px-2 py-0.5 bg-[#F5EFE6] text-[#6D726D] rounded-full">${m.timings}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>`;
+                });
+                html += `</div></div>`;
+            } else {
+                html += `<div class="p-4 bg-[#FEF3C7] border border-[#FDE68A] rounded-2xl text-sm text-[#92400E]">
+                    <iconify-icon icon="lucide:alert-circle" class="mr-1"></iconify-icon>
+                    No medicines detected. Please upload a clearer image of the prescription.
+                </div>`;
+            }
+
+            // Drug Interaction Warnings
+            if (interactions && interactions.has_interactions && interactions.warnings?.length > 0) {
+                html += `<div class="p-4 bg-[#FEF3C7] border border-[#FDE68A] rounded-2xl">
+                    <h4 class="font-bold text-sm text-[#92400E] mb-2 flex items-center gap-1">
+                        <iconify-icon icon="lucide:alert-triangle"></iconify-icon> Drug Interaction Warnings
+                    </h4>
+                    <ul class="space-y-1">
+                        ${interactions.warnings.map(w => `<li class="text-xs text-[#78350F]">• ${w}</li>`).join('')}
+                    </ul>
+                </div>`;
+            } else if (interactions && !interactions.has_interactions) {
+                html += `<div class="p-3 bg-[#D1FAE5] border border-[#A7F3D0] rounded-2xl text-xs text-[#065F46] flex items-center gap-2">
+                    <iconify-icon icon="lucide:check-circle" class="text-sm"></iconify-icon>No drug interactions detected with previous prescriptions.
+                </div>`;
+            }
+
+            // Calendar Export
+            if (prescId) {
+                html += `<a href="${API_BASE}/prescription/${prescId}/calendar" target="_blank"
+                    class="flex items-center justify-center gap-2 w-full py-3 border-2 border-[#88A68B] text-[#4D6B53] font-bold rounded-2xl text-sm hover:bg-[#88A68B] hover:text-white transition-all">
+                    <iconify-icon icon="lucide:calendar-plus"></iconify-icon>
+                    Export Medication Reminders (.ics)
+                </a>`;
+            }
+
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        // ---- History: Show upcoming doses ----
+        async function loadPrescriptionHistory() {
+            const container = document.getElementById('prescriptionHistoryList');
+            try {
+                const res = await fetch(`${API_BASE}/reminders/upcoming`);
+                if (!res.ok) throw new Error();
+                const reminders = await res.json();
+                if (!Array.isArray(reminders) || reminders.length === 0) {
+                    container.innerHTML = `<div class="py-10 text-center">
+                        <iconify-icon icon="lucide:pill" class="text-4xl text-[#E8E1D5] mb-3 block"></iconify-icon>
+                        <p class="text-[#6D726D] font-medium text-sm">No prescriptions yet</p>
+                        <p class="text-xs text-[#B8BFB8] mt-1">Upload a prescription to see your medication schedule</p>
+                    </div>`;
+                    return;
+                }
+                container.innerHTML = reminders.map(r => `
+                <div class="flex items-center gap-4 p-4 bg-[#FDFBF7] rounded-2xl border border-[#F5EFE6] mb-3 hover:border-[#88A68B] transition-colors">
+                    <div class="w-10 h-10 rounded-2xl bg-[#88A68B]/10 flex items-center justify-center flex-shrink-0">
+                        <iconify-icon icon="lucide:pill" class="text-[#88A68B]"></iconify-icon>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-bold text-sm text-[#2D302D]">${r.medicine}</p>
+                        <p class="text-xs text-[#6D726D]">${r.instruction || 'As prescribed'}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-bold text-[#4D6B53]">${r.time}</p>
+                        <p class="text-[10px] text-[#B8BFB8]">${r.date}</p>
+                    </div>
+                </div>`).join('');
+            } catch {
+                container.innerHTML = `<div class="py-10 text-center">
+                    <iconify-icon icon="lucide:pill" class="text-4xl text-[#E8E1D5] mb-3 block"></iconify-icon>
+                    <p class="text-sm text-[#6D726D]">No prescriptions uploaded yet.</p>
+                </div>`;
+            }
+        }
+
+        document.getElementById('btnRefreshHistory').addEventListener('click', loadPrescriptionHistory);
+        document.addEventListener('DOMContentLoaded', loadPrescriptionHistory);
+    </script>
 </body>
 
 </html>

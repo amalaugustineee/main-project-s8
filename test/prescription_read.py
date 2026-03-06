@@ -8,21 +8,15 @@ from PIL import Image
 import pytesseract
 import shutil
 import re
-from google import genai  # ✅ Official Gemini SDK
+
+# Local LLM (replaces Google Gemini)
+from llm_local import llm_generate
 
 # ---------- LOGGING ----------
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
-
-# ---------- CONFIG ----------
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if not GEMINI_API_KEY:
-    raise EnvironmentError("❌ GEMINI_API_KEY environment variable not set")
-
-# Initialize Gemini SDK client
-client = genai.Client(api_key=GEMINI_API_KEY)
 
 # ---------- OCR ----------
 def ocr_file(path):
@@ -45,7 +39,7 @@ def ocr_file(path):
             pytesseract.pytesseract.tesseract_cmd = found
         else:
             raise EnvironmentError(
-                "Tesseract not found. Install it and ensure it’s on PATH, "
+                "Tesseract not found. Install it and ensure it's on PATH, "
                 "or set TESSERACT_CMD to the full path to tesseract.exe."
             )
 
@@ -60,10 +54,10 @@ def ocr_file(path):
         img = Image.open(path)
         return pytesseract.image_to_string(img, lang="eng")
 
-# ---------- GEMINI (SDK) ----------
-def analyze_prescription_with_gemini(ocr_text):
+# ---------- LLM ANALYSIS ----------
+def analyze_prescription_with_llm(ocr_text):
     """
-    Sends OCR text to Gemini and asks for structured JSON of medicines, frequency, and duration.
+    Sends OCR text to the local LLM and asks for structured JSON of medicines, frequency, and duration.
     """
     prompt = (
         "Extract prescription details from the following text. "
@@ -75,32 +69,24 @@ def analyze_prescription_with_gemini(ocr_text):
         "   - 'frequency': Dosing frequency (e.g., '1-0-1').\n"
         "   - 'days': Duration (number of days or 'PRN').\n"
         "   - 'timings': Specific timing instructions (e.g., 'After Food', 'Empty Stomach', 'Night').\n\n"
+        "Return ONLY the JSON object, no extra text.\n\n"
         f"Prescription text:\n{ocr_text}"
     )
 
     try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-preview-09-2025",
-            contents=prompt
-        )
-
-        text = response.text.strip()
-        # Remove any Markdown-style code fences (```json ... ```)
-        cleaned = re.sub(r"^\s*```json\s*|\s*```\s*$", "", text, flags=re.MULTILINE).strip()
-        parsed = json.loads(cleaned)
+        parsed = llm_generate(prompt, json_mode=True)
         return parsed
-
     except json.JSONDecodeError as e:
-        logging.error(f"❌ Failed to parse Gemini JSON output: {text[:500]}...")
+        logging.error(f"❌ Failed to parse LLM JSON output: {e}")
         raise
     except Exception as e:
-        logging.error(f"❌ Gemini API error: {e}")
+        logging.error(f"❌ Local LLM error: {e}")
         raise
 
 # ---------- MAIN PIPELINE ----------
 def analyze_prescription(path):
     """
-    Main pipeline: OCR → Gemini → JSON output
+    Main pipeline: OCR → Local LLM → JSON output
     """
     path = Path(path)
     if not path.exists():
@@ -114,8 +100,8 @@ def analyze_prescription(path):
     if not ocr_text.strip():
         raise ValueError("OCR produced no readable text. Check file clarity.")
 
-    logging.info("🤖 Sending extracted text to Gemini for medicine extraction...")
-    result = analyze_prescription_with_gemini(ocr_text)
+    logging.info("🤖 Sending extracted text to local LLM for medicine extraction...")
+    result = analyze_prescription_with_llm(ocr_text)
 
     # Print and return JSON
     print(json.dumps(result, indent=2))
@@ -125,9 +111,9 @@ def analyze_prescription(path):
 if __name__ == "__main__":
     try:
         if len(sys.argv) < 2:
-            print("Usage: python prescription_parser_gemini.py <path_to_prescription>")
+            print("Usage: python prescription_read.py <path_to_prescription>")
             print("\nExample:")
-            print("  python prescription_parser_gemini.py my_prescription.jpg")
+            print("  python prescription_read.py my_prescription.jpg")
             sys.exit(1)
 
         analyze_prescription(sys.argv[1])

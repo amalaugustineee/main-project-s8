@@ -6,7 +6,7 @@ load_dotenv("../.env")
 key = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=key)
 
-model = "gemini-2.5-flash-preview-09-2025"
+model = "gemini-2.0-flash-lite"
 
 print(f"Testing Chat Model: {model}")
 try:

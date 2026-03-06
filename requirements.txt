@@ -1,11 +1,10 @@
 fastapi
 uvicorn
-google-genai
+ollama
 python-multipart
 sqlmodel
 python-dotenv
 pdf2image
 pytesseract
 Pillow
-
 tenacity

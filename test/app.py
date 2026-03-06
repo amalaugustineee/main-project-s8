@@ -1,16 +1,21 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
+from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from google import genai
 import tempfile
 import os
 import json
+from icalendar import Calendar, Event, vText
+import uuid
+from datetime import datetime, timedelta, date
 
+import chromadb
+import chromadb.utils.embedding_functions as embedding_functions
+from pypdf import PdfReader
+import io
 
-
-# Import callable functions from your local scripts
-from datetime import datetime
+# Local LLM (replaces Google Gemini)
+from llm_local import llm_generate
 from dotenv import load_dotenv
 load_dotenv("../.env")
 
@@ -40,6 +45,17 @@ app = FastAPI(
 def on_startup():
     create_db_and_tables()
 
+# --- Initialize ChromaDB for Local RAG ---
+chroma_client = chromadb.PersistentClient(path="./chroma_db")
+ollama_ef = embedding_functions.OllamaEmbeddingFunction(
+    url="http://localhost:11434/api/embeddings",
+    model_name="nomic-embed-text",
+)
+rag_collection = chroma_client.get_or_create_collection(
+    name="medical_records", 
+    embedding_function=ollama_ef
+)
+
 # ---------- CORS ----------
 app.add_middleware(
     CORSMiddleware,
@@ -49,20 +65,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---------- Gemini Client (shared) ----------
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-gemini_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
-
-# Retry Helper
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10), retry=retry_if_exception_type(Exception))
-def safe_generate(model, contents):
-    try:
-        return gemini_client.models.generate_content(model=model, contents=contents)
-    except Exception as e:
-        print(f"⚠️ safe_generate failed (attempting retry): {e}")
-        raise e
+# ---------- Local LLM (Ollama) ----------
+# llm_generate() is imported from llm_local.py above.
+# No API key needed — runs locally via Ollama.
 
 # ---------- Utility ----------
 def save_temp_file(uploaded_file: UploadFile) -> str:
@@ -128,8 +133,43 @@ async def prescription_analysis(file: UploadFile = File(...), session: Session =
             # Removed per user request
             # await schedule_medicine_reminders(meds)
             
+            # Add the DB ID to the response so the frontend can generate calendar exports
+            result["prescription_id"] = pres.id
+            
         except Exception as db_e:
             print(f"⚠️ Failed to save prescription to DB: {db_e}")
+            
+        # --- FEATURE 3: Smart Medication Interaction Checker ---
+        try:
+            # Fetch past prescriptions (last 3, excluding the current one)
+            recent_pres = session.exec(select(Prescription).where(Prescription.id != pres.id).order_by(Prescription.created_at.desc()).limit(3)).all()
+            
+            if recent_pres:
+                existing_meds = []
+                for rp in recent_pres:
+                    for m in rp.medicines:
+                        existing_meds.append(m.medicine_name)
+                
+                new_meds = [m.get("medicine", "") for m in result.get("medicines", [])]
+                
+                if existing_meds and new_meds:
+                    prompt = f"""
+You are a pharmacology AI. The patient is currently taking these medications: {', '.join(set(existing_meds))}.
+They were just prescribed these NEW medications: {', '.join(new_meds)}.
+
+Check for any severe or highly notable drug-drug interactions between the CURRENT and NEW medications.
+
+Return ONLY a JSON object (no markdown, no extra text) with this exact structure:
+{{
+  "has_interactions": true,
+  "warnings": ["Warning 1", "Warning 2"]
+}}
+If there are no notable interactions, return has_interactions as false and an empty list for warnings.
+"""
+                    interaction_res = llm_generate(prompt, json_mode=True)
+                    result["interactions"] = interaction_res
+        except Exception as interaction_e:
+            print(f"⚠️ Failed to check drug interactions: {interaction_e}")
             
         return JSONResponse(content=result)
     except Exception as e:
@@ -138,16 +178,71 @@ async def prescription_analysis(file: UploadFile = File(...), session: Session =
         if os.path.exists(path):
             os.remove(path)
 
+@app.get("/prescription/{pres_id}/calendar")
+def export_prescription_calendar(pres_id: int, session: Session = Depends(get_session)):
+    """Generate an .ics file with medication reminders for a given prescription."""
+    pres = session.get(Prescription, pres_id)
+    if not pres:
+        raise HTTPException(status_code=404, detail="Prescription not found")
 
-# ---------- 2. Health-Risk Endpoint ----------
+    cal = Calendar()
+    cal.add('prodid', '-//Mediware Intelligence API//Calendar Export//EN')
+    cal.add('version', '2.0')
+    
+    # Simple logic for duration, defaulting to 7 days
+    duration_days = 7
+    if pres.medicines and pres.medicines[0].duration:
+        try:
+            # try to extract a number from duration string
+            digits = [int(s) for s in pres.medicines[0].duration.split() if s.isdigit()]
+            if digits:
+                duration_days = digits[0]
+        except Exception:
+            pass
+
+    start_date = date.today()
+    end_date = start_date + timedelta(days=duration_days)
+    
+    for med in pres.medicines:
+        # Parse frequency (e.g., 1-0-1 or 101) to specific times
+        daily_times = parse_frequency(str(med.frequency), str(med.timings or ""))
+        
+        for time_str in daily_times:
+            # Create a recurring event
+            event = Event()
+            event.add('summary', f"Take {med.medicine_name}")
+            
+            # Simple assumption: start the reminders today at the specific time
+            hour, minute = map(int, time_str.split(':'))
+            start_dt = datetime.combine(start_date, datetime.min.time()).replace(hour=hour, minute=minute)
+            event.add('dtstart', start_dt)
+            event.add('dtend', start_dt + timedelta(minutes=15))
+            
+            # Recurrence Rule: daily until end_date
+            event.add('rrule', {'freq': 'daily', 'until': end_date})
+            
+            desc = f"Medicine: {med.medicine_name}\n"
+            if med.timings:
+                desc += f"Instructions: {med.timings}\n"
+            if pres.doctor_name:
+                desc += f"Doctor: {pres.doctor_name}\n"
+                
+            event.add('description', desc)
+            event['uid'] = str(uuid.uuid4()) + '@mediware'
+            cal.add_component(event)
+
+    ics_content = cal.to_ical()
+    headers = {
+        'Content-Disposition': f'attachment; filename="prescription_{pres_id}.ics"'
+    }
+    return Response(content=ics_content, media_type="text/calendar", headers=headers)
+
+# ---------- 2. Health-Summary Endpoint ----------
 @app.post("/health/summary")
 def health_summary(session: Session = Depends(get_session)):
     """
     Analyze current health condition based on historical Lab Reports and Prescriptions.
     """
-    if not gemini_client:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured")
-
     # 1. Fetch recent Lab Reports (last 5)
     reports = session.exec(select(HealthReport).order_by(HealthReport.created_at.desc()).limit(5)).all()
     
@@ -171,7 +266,7 @@ def health_summary(session: Session = Depends(get_session)):
             for m in p.medicines:
                 med_context += f"  - {m.medicine_name} (Freq: {m.frequency}, Timing: {m.timings or 'N/A'}, Duration: {m.duration})\n"
 
-    # 3. Ask Gemini
+    # 3. Ask local LLM
     prompt = f"""
     You are a detailed medical AI assistant. Analyze the patient's Current Health Condition based on their history.
     
@@ -195,18 +290,10 @@ def health_summary(session: Session = Depends(get_session)):
     """
     
     try:
-        from tenacity import RetryError
-        try:
-            resp = safe_generate(
-                model="gemini-2.5-flash-preview-09-2025",
-                contents=prompt,
-            )
-            return {"analysis": resp.text}
-        except RetryError as re:
-            last_exc = re.last_attempt.exception()
-            raise HTTPException(status_code=500, detail=f"Gemini Analysis Failed: {str(last_exc)}")
+        analysis_text = llm_generate(prompt)
+        return {"analysis": analysis_text}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Gemini Analysis Failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Local LLM Analysis Failed: {e}")
 
 
 
@@ -399,29 +486,71 @@ def search_prescriptions(session: Session, start_date: datetime = None, end_date
             output += f"- {m.medicine_name} ({m.frequency} for {m.duration})\n"
     return output
 
+# ---------- FEATURE 1: Medical Records RAG Upload ----------
+@app.post("/records/upload")
+async def upload_record(file: UploadFile = File(...)):
+    """Upload a PDF or TXT medical record to the local knowledge base."""
+    text_content = ""
+    try:
+        contents = await file.read()
+        if file.filename.lower().endswith('.pdf'):
+            reader = PdfReader(io.BytesIO(contents))
+            for page in reader.pages:
+                text_content += page.extract_text() + "\n"
+        else:
+            text_content = contents.decode("utf-8", errors="ignore")
+            
+        if not text_content.strip():
+            raise HTTPException(status_code=400, detail="Could not extract text from file.")
+            
+        # Very simple chunking
+        chunk_size = 1000
+        overlap = 200
+        chunks = []
+        for i in range(0, len(text_content), chunk_size - overlap):
+            chunk = text_content[i:i + chunk_size].strip()
+            if len(chunk) > 100:
+                chunks.append(chunk)
+                
+        if not chunks:
+            raise HTTPException(status_code=400, detail="File content too short to index.")
+
+        # Assign unique IDs
+        doc_id = str(uuid.uuid4())
+        ids = [f"{doc_id}_chunk_{i}" for i in range(len(chunks))]
+        metadatas = [{"source": file.filename, "type": "medical_record"} for _ in chunks]
+        
+        # Add to ChromaDB
+        rag_collection.add(
+            documents=chunks,
+            metadatas=metadatas,
+            ids=ids
+        )
+        
+        return JSONResponse(content={"message": f"Successfully indexed '{file.filename}' into {len(chunks)} chunks."})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to process document: {e}")
+        
 @app.post("/wellbeing-chat")
 async def wellbeing_chat(req: ChatRequest, session: Session = Depends(get_session)):
     """
-    Intelligent chatbot (Optimized Single-Call).
-    Proactively fetches context to avoid double-calling the API.
+    Intelligent chatbot using local LLM.
+    Proactively fetches context from DB before calling the model.
     """
-    if not gemini_client:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured")
-
     user_q = (req.question or "").strip()
     if not user_q:
         raise HTTPException(status_code=400, detail="Question cannot be empty")
 
     # --- Step 1: Proactive Context Fetching (Cheap DB Ops) ---
-    # We fetch the last 3 reports and last 3 prescriptions to provide context "just in case"
-    # This saves us from making a "Classifier" call to Gemini first.
-    
     # Lab Reports
     recent_reports = session.exec(select(HealthReport).order_by(HealthReport.created_at.desc()).limit(3)).all()
     lab_context = ""
     if recent_reports:
         for r in recent_reports:
-            lab_context += f"- Report ({r.created_at.strftime('%Y-%m-%d')}): {r.summary}\n"
+            lab_context += f"\n--- Report ({r.created_at.strftime('%Y-%m-%d')}) ---\n"
+            lab_context += f"Summary: {r.summary}\n"
+            for t in r.test_results:
+                lab_context += f"- {t.test_name}: {t.value} {t.unit}\n"
             
     # Prescriptions
     recent_prescriptions = session.exec(select(Prescription).order_by(Prescription.created_at.desc()).limit(3)).all()
@@ -435,30 +564,40 @@ async def wellbeing_chat(req: ChatRequest, session: Session = Depends(get_sessio
             med_str = ", ".join(med_details)
             med_context += f"- Prescription ({p.created_at.strftime('%Y-%m-%d')}): {med_str} (Dr. {p.doctor_name})\n"
 
-    # --- Step 2: Unified Prompt (1 Call) ---
-    system_preamble = (
+    # --- Step 2: Unstructured Context (Local RAG) ---
+    rag_context = ""
+    try:
+        results = rag_collection.query(
+            query_texts=[user_q],
+            n_results=3
+        )
+        if results and results.get("documents") and results["documents"][0]:
+            rag_context = ""
+            for doc in results["documents"][0]:
+                rag_context += f"- {doc}\n"
+    except Exception as rag_e:
+        print(f"⚠️ RAG Retrieval failed: {rag_e}")
+
+    # --- Step 3: Unified Prompt (1 Call to local LLM) ---
+    full_prompt = (
         "You are a helpful medical assistant. The user is asking a question.\n"
-        "We have fetched some recent medical history for you context:\n\n"
+        "We have fetched some recent medical history for your context:\n\n"
         f"**Recent Lab Reports:**\n{lab_context or 'None'}\n\n"
         f"**Recent Prescriptions:**\n{med_context or 'None'}\n\n"
+        f"**Historical Medical Documents (Knowledge Base):**\n{rag_context or 'None'}\n\n"
         "**Instructions:**\n"
-        "1. If the user asks about their reports/medicines, use the context above.\n"
-        "2. If the user asks a general health question, answer generally.\n"
-        "3. Keep answers concise and helpful. formatting in Markdown."
+        "1. **Trend Analysis**: If the user asks about a specific metric (e.g. 'How is my glucose?'), analyzing the trend is a priority. Compare values across recent reports. Do NOT just list the values.\n"
+        "2. **Actionable Advice**: After stating the trend, provide a Specific Action Plan (Dietary, Lifestyle, or Medical).\n"
+        "3. **Visuals**: If the user asks about a metric we have data for, append `[GRAPH: Metric Name]` at the very end of your response (use exact name from Recent Lab Reports).\n"
+        "4. If the user asks a general health question, answer generally.\n"
+        "5. Keep answers concise, helpful, and use **Markdown** for readability.\n\n"
+        f"User Question: {user_q}"
     )
 
     try:
-        final_resp = safe_generate(
-            model="gemini-2.5-flash-preview-09-2025",
-            contents=f"{system_preamble}\n\nUser Question: {user_q}"
-        )
-        return {"answer": final_resp.text}
-
+        answer_text = llm_generate(full_prompt)
+        return {"answer": answer_text}
     except Exception as e:
-        # Graceful error handling
-        from tenacity import RetryError
-        if isinstance(e, RetryError):
-            e = e.last_attempt.exception()
         return {"answer": f"⚠️ **System Error**: {str(e)}"}
 
 
@@ -524,7 +663,7 @@ class TestResultRead(SQLModel):
     test_name: str
     value: float
     unit: str
-    risk_percent: int
+    risk_percent: float
     timestamp: datetime
 
 class HealthReportRead(SQLModel):
@@ -553,6 +692,7 @@ def get_trend_data(test_name: str, session: Session = Depends(get_session)):
     """Get historical data for a specific test."""
     statement = select(TestResult).where(TestResult.test_name == test_name).order_by(TestResult.timestamp)
     results = session.exec(statement).all()
+    return results
 # ---------- 6. Reminders (Queue) ----------
 from datetime import datetime, timedelta
 

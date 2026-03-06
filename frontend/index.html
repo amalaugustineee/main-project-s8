@@ -1,112 +1,880 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Medical Intelligence Frontend</title>
-  <link rel="stylesheet" href="styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vitality Companion | Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
+    <link href="https://api.fontshare.com/v2/css?f[]=outfit@300,400,500,600,700&f[]=satoshi@400,500,700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --color-cream: #FDFBF7;
+            --color-sage: #88A68B;
+            --color-sage-dark: #4D6B53;
+            --color-terracotta: #D47B5A;
+            --color-mustard: #E8B86D;
+            --color-beige: #F5EFE6;
+            --color-soft-blue: #A8D1D1;
+        }
+
+        body {
+            font-family: 'Satoshi', sans-serif;
+            background-color: var(--color-cream);
+            color: #2D302D;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: var(--color-sage);
+            border-radius: 10px;
+        }
+
+        .chat-messages-area::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .chat-messages-area::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-messages-area::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+        }
+
+        .nav-item-active {
+            background-color: var(--color-sage);
+            color: white;
+        }
+
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.35s;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        /* Chat message markdown styling */
+        #chatMessages strong {
+            font-weight: 700;
+        }
+
+        #chatMessages em {
+            font-style: italic;
+        }
+
+        #chatMessages ul {
+            list-style: disc;
+            padding-left: 1.25rem;
+            margin-top: 0.25rem;
+        }
+
+        #chatMessages li {
+            margin-bottom: 0.15rem;
+        }
+
+        #chatMessages p {
+            margin-bottom: 0.25rem;
+        }
+
+        #chatMessages h2,
+        #chatMessages h3 {
+            font-weight: 700;
+            margin-top: 0.5rem;
+            font-size: 1em;
+        }
+
+        /* Typing indicator */
+        .typing-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.7);
+            display: inline-block;
+            animation: bounce 1.2s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            80%,
+            100% {
+                transform: translateY(0);
+            }
+
+            40% {
+                transform: translateY(-6px);
+            }
+        }
+    </style>
 </head>
 
 <body>
-  <header>
-    <div>
-      <h1>Medical Intelligence</h1>
+    <div class="flex min-h-screen bg-[#FDFBF7] overflow-hidden">
+
+        <!-- ===================== SIDEBAR ===================== -->
+        <aside class="sidebar">
+      <style>
+        .sidebar {
+          width: 220px;
+          background: linear-gradient(160deg, #F5EFE6 0%, #F0EBE0 100%);
+          border-right: 1px solid #E8E1D5;
+          display: flex;
+          flex-direction: column;
+          padding: 20px 14px;
+          height: 100vh;
+          position: sticky;
+          top: 0;
+          flex-shrink: 0;
+          z-index: 50;
+        }
+        .sidebar-logo {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 24px;
+          padding: 0 4px;
+        }
+        .sidebar-logo-icon {
+          width: 40px; height: 40px;
+          background: linear-gradient(135deg, #88A68B 0%, #4D6B53 100%);
+          border-radius: 14px;
+          display: flex; align-items: center; justify-content: center;
+          color: white; font-size: 20px;
+          box-shadow: 0 4px 12px rgba(77,107,83,0.3);
+          flex-shrink: 0;
+        }
+        .sidebar-logo-text {
+          font-family: 'Outfit', sans-serif;
+          font-size: 18px;
+          font-weight: 700;
+          color: #4D6B53;
+          letter-spacing: -0.3px;
+        }
+        .sidebar-logo-sub {
+          font-size: 9px;
+          color: #8B9E8C;
+          font-family: 'Satoshi', sans-serif;
+          font-weight: 500;
+          text-transform: uppercase;
+          letter-spacing: 0.8px;
+          margin-top: -2px;
+        }
+        .nav-section-label {
+          font-size: 9px;
+          font-weight: 700;
+          color: #B5AEA3;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          padding: 0 8px;
+          margin: 4px 0 6px;
+        }
+        .nav-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 9px 10px;
+          border-radius: 16px;
+          text-decoration: none;
+          color: #6D726D;
+          position: relative;
+          transition: all 0.2s ease;
+          margin-bottom: 3px;
+          font-family: 'Satoshi', sans-serif;
+          font-size: 13px;
+          font-weight: 500;
+        }
+        .nav-active {
+          font-weight: 700;
+        }
+        .nav-icon {
+          width: 30px; height: 30px;
+          border-radius: 10px;
+          display: flex; align-items: center; justify-content: center;
+          color: white;
+          font-size: 14px;
+          flex-shrink: 0;
+          transition: background 0.2s;
+        }
+        .nav-label {
+          flex: 1;
+          transition: color 0.2s;
+        }
+        .nav-dot {
+          width: 6px; height: 6px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+        .sidebar-footer {
+          margin-top: auto;
+          padding: 12px 8px 0;
+          border-top: 1px solid #E8E1D5;
+        }
+        .sidebar-badge {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px;
+          background: linear-gradient(135deg, rgba(136,166,139,0.15) 0%, rgba(77,107,83,0.08) 100%);
+          border-radius: 14px;
+          border: 1px solid rgba(136,166,139,0.2);
+        }
+        .sidebar-badge-icon {
+          width: 28px; height: 28px;
+          background: linear-gradient(135deg, #88A68B 0%, #4D6B53 100%);
+          border-radius: 8px;
+          display: flex; align-items: center; justify-content: center;
+          color: white; font-size: 12px; flex-shrink: 0;
+        }
+        .sidebar-badge-text {
+          font-size: 10px; line-height: 1.4;
+          font-family: 'Satoshi', sans-serif;
+        }
+        .sidebar-badge-text strong {
+          display: block; color: #4D6B53; font-weight: 700; font-size: 10.5px;
+        }
+        .sidebar-badge-text span {
+          color: #8B9E8C;
+        }
+      </style>
+
+      <!-- Logo -->
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">
+          <iconify-icon icon="lucide:heart-pulse"></iconify-icon>
+        </div>
+        <div>
+          <div class="sidebar-logo-text">Vitality</div>
+          <div class="sidebar-logo-sub">Health AI</div>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <div class="nav-section-label">Navigation</div>
+      <nav style="flex:1">
+        <a href="index.html" class="nav-item nav-active" style="background:#EDE9F9; color:#7C6EBA">
+          <span class="nav-icon" style="background:#7C6EBA">
+            <iconify-icon icon="lucide:layout-dashboard"></iconify-icon>
+          </span>
+          <span class="nav-label">Dashboard</span>
+          <span class="nav-dot" style="background:#7C6EBA"></span>
+        </a>
+        <a href="prescription.html" class="nav-item" data-color="#D47B5A" data-bg="#FBF0EC"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:pill"></iconify-icon>
+          </span>
+          <span class="nav-label">Prescriptions</span>
+        </a>
+        <a href="labreports.html" class="nav-item" data-color="#5B8DB8" data-bg="#EBF3FA"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:microscope"></iconify-icon>
+          </span>
+          <span class="nav-label">Lab Reports</span>
+        </a>
+        <a href="diet.html" class="nav-item" data-color="#88A68B" data-bg="#EDF3EE"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:salad"></iconify-icon>
+          </span>
+          <span class="nav-label">Meal Planner</span>
+        </a>
+        <a href="trends.html" class="nav-item" data-color="#E8B86D" data-bg="#FDF5E8"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:trending-up"></iconify-icon>
+          </span>
+          <span class="nav-label">Trends</span>
+        </a>
+        <a href="summary.html" class="nav-item" data-color="#4D9B8A" data-bg="#E8F5F3"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:shield-check"></iconify-icon>
+          </span>
+          <span class="nav-label">Health Summary</span>
+        </a>
+      </nav>
+
+      <!-- Footer badge -->
+      <div class="sidebar-footer">
+        <div class="sidebar-badge">
+          <div class="sidebar-badge-icon">
+            <iconify-icon icon="lucide:sparkles"></iconify-icon>
+          </div>
+          <div class="sidebar-badge-text">
+            <strong>AI Powered</strong>
+            <span>Local LLM · Private</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+        <!-- ===================== MAIN CONTENT ===================== -->
+        <main class="flex-1 flex flex-col p-8 relative overflow-y-auto custom-scrollbar">
+
+            <!-- Header -->
+            <header class="flex items-center justify-between mb-8">
+                <div>
+                    <h1 class="text-3xl font-bold text-[#2D302D] mb-1">Good day! 👋</h1>
+                    <p class="text-[#6D726D]">Your health intelligence hub.</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a href="labreports.html"
+                        class="flex items-center gap-2 px-5 py-2.5 bg-[#D47B5A] text-white rounded-2xl font-bold text-sm hover:bg-[#B36245] transition-all shadow-md">
+                        <iconify-icon icon="lucide:upload"></iconify-icon>
+                        Upload Report
+                    </a>
+                    <a href="prescription.html"
+                        class="flex items-center gap-2 px-5 py-2.5 bg-[#88A68B] text-white rounded-2xl font-bold text-sm hover:bg-[#4D6B53] transition-all shadow-md">
+                        <iconify-icon icon="lucide:pill"></iconify-icon>
+                        Add Prescription
+                    </a>
+                </div>
+            </header>
+
+            <!-- Dashboard Grid -->
+            <div class="grid grid-cols-12 gap-6">
+
+                <!-- Left Column (8/12) -->
+                <div class="col-span-12 lg:col-span-8 space-y-6">
+
+                    <!-- Welcome / Getting Started Card -->
+                    <section
+                        class="bg-gradient-to-br from-[#4D6B53] to-[#88A68B] rounded-[32px] p-8 text-white shadow-xl relative overflow-hidden">
+                        <div class="absolute -right-8 -top-8 opacity-10">
+                            <iconify-icon icon="ph:leaf-fill" class="text-[180px]"></iconify-icon>
+                        </div>
+                        <h2 class="text-2xl font-bold mb-2">Welcome to Vitality</h2>
+                        <p class="text-white/80 text-sm leading-relaxed mb-6">
+                            Upload a lab report or prescription to get started. Your AI health assistant is ready to
+                            analyze your data and answer your health questions.
+                        </p>
+                        <div class="flex flex-wrap gap-3">
+                            <a href="labreports.html"
+                                class="flex items-center gap-2 px-5 py-2.5 bg-white text-[#4D6B53] rounded-2xl font-bold text-sm hover:bg-[#F5EFE6] transition-all">
+                                <iconify-icon icon="lucide:microscope"></iconify-icon>
+                                Analyze Lab Report
+                            </a>
+                            <a href="prescription.html"
+                                class="flex items-center gap-2 px-5 py-2.5 bg-white/20 text-white border border-white/30 rounded-2xl font-bold text-sm hover:bg-white/30 transition-all">
+                                <iconify-icon icon="lucide:pill"></iconify-icon>
+                                Upload Prescription
+                            </a>
+                            <a href="diet.html"
+                                class="flex items-center gap-2 px-5 py-2.5 bg-white/20 text-white border border-white/30 rounded-2xl font-bold text-sm hover:bg-white/30 transition-all">
+                                <iconify-icon icon="lucide:utensils"></iconify-icon>
+                                Get Diet Plan
+                            </a>
+                        </div>
+                    </section>
+
+                    <!-- Biomarker Trends -->
+                    <section class="bg-white rounded-[32px] p-8 shadow-xl shadow-black/5 border border-[#F5EFE6]">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center gap-3">
+                                <div class="p-3 bg-[#88A68B]/10 rounded-2xl text-[#88A68B]">
+                                    <iconify-icon icon="lucide:activity" class="text-2xl"></iconify-icon>
+                                </div>
+                                <div>
+                                    <h2 class="text-xl font-bold text-[#2D302D]">Health Trends</h2>
+                                    <p class="text-xs text-[#6D726D]">From your lab reports</p>
+                                </div>
+                            </div>
+                            <a href="trends.html"
+                                class="text-[#88A68B] font-bold text-sm hover:underline flex items-center gap-1">
+                                Full View <iconify-icon icon="lucide:arrow-right"></iconify-icon>
+                            </a>
+                        </div>
+                        <div class="h-[260px] w-full relative">
+                            <canvas id="biomarkerChart"></canvas>
+                            <div id="biomarkerNoData"
+                                class="absolute inset-0 flex flex-col items-center justify-center text-center hidden">
+                                <iconify-icon icon="lucide:bar-chart-2"
+                                    class="text-5xl text-[#E8E1D5] mb-3"></iconify-icon>
+                                <p class="text-[#6D726D] font-medium">No data yet</p>
+                                <p class="text-xs text-[#B8BFB8] mt-1">Upload a lab report to see your health trends</p>
+                                <a href="labreports.html"
+                                    class="mt-4 px-4 py-2 bg-[#88A68B] text-white rounded-xl text-xs font-bold hover:bg-[#4D6B53] transition-colors">Upload
+                                    Lab Report</a>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Medicine Queue (real data from /reminders/upcoming) -->
+                    <section class="bg-white rounded-[32px] p-8 shadow-xl shadow-black/5 border border-[#F5EFE6]">
+                        <div class="flex items-center justify-between mb-6">
+                            <div class="flex items-center gap-3">
+                                <div class="p-3 bg-[#E8B86D]/10 rounded-2xl text-[#E8B86D]">
+                                    <iconify-icon icon="lucide:clock-4" class="text-2xl"></iconify-icon>
+                                </div>
+                                <div>
+                                    <h2 class="text-xl font-bold text-[#2D302D]">Medicine Queue</h2>
+                                    <p class="text-xs text-[#6D726D]">Upcoming doses from your prescriptions</p>
+                                </div>
+                            </div>
+                            <a href="prescription.html"
+                                class="text-[#88A68B] font-bold text-sm hover:underline flex items-center gap-1">
+                                Manage <iconify-icon icon="lucide:arrow-right"></iconify-icon>
+                            </a>
+                        </div>
+                        <div id="medicineQueueContainer" class="space-y-3">
+                            <div class="flex items-center justify-center py-8 text-[#B8BFB8]">
+                                <div class="text-center">
+                                    <iconify-icon icon="lucide:loader-2"
+                                        class="text-3xl animate-spin mb-2"></iconify-icon>
+                                    <p class="text-sm">Loading medicines...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Right Column (4/12) — AI Chatbot -->
+                <div class="col-span-12 lg:col-span-4">
+                    <div class="bg-[#4D6B53] rounded-[32px] shadow-2xl shadow-[#88A68B]/30 overflow-hidden flex flex-col sticky top-8"
+                        style="height: calc(100vh - 7rem);">
+
+                        <!-- Chat Header -->
+                        <div class="p-5 flex items-center gap-4 border-b border-white/10 flex-shrink-0">
+                            <div class="relative">
+                                <div
+                                    class="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center text-white">
+                                    <iconify-icon icon="fluent:bot-24-filled" class="text-2xl"></iconify-icon>
+                                </div>
+                                <div
+                                    class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-400 border-2 border-[#4D6B53] rounded-full">
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-white font-bold">Llama Well-being</h3>
+                                <p class="text-white/50 text-xs">Powered by local LLM</p>
+                            </div>
+                            <!-- Upload Knowledge Base -->
+                            <div class="ml-auto">
+                                <form id="formRagUpload" class="hidden">
+                                    <input type="file" id="ragFileInput" name="file" accept=".pdf,.txt" class="hidden">
+                                </form>
+                                <button id="btnRagUploadTrigger" title="Upload document to knowledge base"
+                                    class="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center text-white transition-colors">
+                                    <iconify-icon icon="lucide:upload-cloud" class="text-lg"></iconify-icon>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Chat Messages Area (scrollable) -->
+                        <div id="chatMessages" class="flex-1 p-4 space-y-3 overflow-y-auto chat-messages-area">
+                            <!-- Welcome message -->
+                            <div class="flex items-start gap-2">
+                                <div
+                                    class="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                                    <iconify-icon icon="fluent:bot-24-filled" class="text-sm text-white"></iconify-icon>
+                                </div>
+                                <div
+                                    class="bg-white/10 text-white p-3.5 text-sm leading-relaxed rounded-[16px_16px_16px_4px] max-w-[88%]">
+                                    👋 Hi! I'm your Vitality AI assistant. I can analyze your health data, answer
+                                    medical questions, and help you understand your lab results. What would you like to
+                                    know?
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Suggested Topics -->
+                        <div class="px-4 py-3 border-t border-white/10 flex-shrink-0">
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    class="chat-suggestion px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-full text-xs font-medium text-white/80 transition-colors"
+                                    data-q="Interpret my latest lab report">
+                                    Interpret Lab Report
+                                </button>
+                                <button
+                                    class="chat-suggestion px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-full text-xs font-medium text-white/80 transition-colors"
+                                    data-q="What meals are good for improving iron levels?">
+                                    Iron-rich Meals
+                                </button>
+                                <button
+                                    class="chat-suggestion px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-full text-xs font-medium text-white/80 transition-colors"
+                                    data-q="Show me my health trends and any concerning patterns">
+                                    Health Trends
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Chat Input -->
+                        <div class="p-4 bg-[#3A523F] flex-shrink-0">
+                            <div class="flex items-center gap-2 bg-white/10 rounded-2xl px-4 py-2">
+                                <input type="text" id="chatInput" placeholder="Ask anything about your health..."
+                                    class="flex-1 bg-transparent border-none outline-none text-sm text-white placeholder-white/40 py-2">
+                                <button id="chatSubmitBtn"
+                                    class="w-9 h-9 bg-[#88A68B] hover:bg-[#6B9F6F] rounded-xl flex items-center justify-center text-white shadow-lg transition-colors flex-shrink-0">
+                                    <iconify-icon icon="lucide:send" class="text-sm"></iconify-icon>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
     </div>
-    <nav>
-      <a href="index.html" class="active">Home</a>
-      <a href="prescription.html">Prescription</a>
-      <a href="healthrisk.html">Risk</a>
-      <a href="diet.html">Diet</a>
-      <a href="summary.html">Summary</a>
-    </nav>
-  </header>
 
-  <main>
-    <!-- Hero Section -->
-    <section class="card" style="text-align: center; padding: 4rem 2rem; background: var(--bg-gradient);">
-      <h2 style="justify-content: center; font-size: 2.5rem; margin-bottom: 0.5rem; border:none;">Your Health, Decoded.
-      </h2>
-      <p style="color: var(--text-light); font-size: 1.1rem; max-width: 600px; margin: 0 auto 2rem auto;">
-        Advanced AI analysis for prescriptions, lab reports, and personalized diet planning.
-      </p>
-      <div style="display: flex; gap: 1rem; justify-content: center;">
-        <a class="btn" href="summary.html">View Health Summary</a>
-        <a class="btn" href="healthrisk.html"
-          style="background: white; color: var(--accent); border: 1px solid var(--accent);">Check Risk</a>
-      </div>
-    </section>
+    <script>
+        // ===================== APP LOGIC =====================
 
-    <!-- Features Grid -->
-    <section class="cols">
-      <a href="prescription.html" class="card" style="text-decoration:none; color:inherit; display:block;">
-        <h3>💊 Prescription Analysis</h3>
-        <p style="color:var(--text-light)">Digitize and understand your doctor's handwritten notes instantly.</p>
-      </a>
-      <a href="healthrisk.html" class="card" style="text-decoration:none; color:inherit; display:block;">
-        <h3>📊 Health Risk Assessment</h3>
-        <p style="color:var(--text-light)">Analyze lab reports to identify potential risks early.</p>
-      </a>
-      <a href="diet.html" class="card" style="text-decoration:none; color:inherit; display:block;">
-        <h3>🥗 Smart Diet Plans</h3>
-        <p style="color:var(--text-light)">Get personalized meal plans based on your health condition.</p>
-      </a>
-      <a href="trends.html" class="card" style="text-decoration:none; color:inherit; display:block;">
-        <h3>📈 Trend Analysis</h3>
-        <p style="color:var(--text-light)">Visualize your vital health metrics over time.</p>
-      </a>
-    </section>
+        const API_BASE = localStorage.getItem('apiBase') || 'http://127.0.0.1:8000';
 
-    <!-- Medicine Reminders -->
-    <section class="card" id="reminderSection">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h2>⏰ Medicine Queue</h2>
-        <button id="btnRefreshQueue"
-          style="background:transparent; border:1px solid #ccc; color:#555; padding:5px 10px; font-size:0.8rem; cursor:pointer; border-radius:15px;">Refresh</button>
-      </div>
-      <div id="reminderQueue" style="display: flex; flex-direction: column; gap: 0.8rem; margin-top: 1rem;">
-        <p>Initializing...</p>
-      </div>
-      <div id="summaryContent" style="margin-top: 1rem; line-height: 1.6;">
-        <p>No analysis generated yet.</p>
-      </div>
+        // ---- Sidebar Reminders ---
+        async function loadSidebarReminders() {
+            const container = document.getElementById('sidebarReminders');
+            try {
+                const res = await fetch(`${API_BASE}/reminders/upcoming`);
+                if (!res.ok) throw new Error('Failed');
+                const data = await res.json();
+                if (!Array.isArray(data) || data.length === 0) {
+                    container.innerHTML = '<p class="text-xs text-[#6D726D]">No medicines scheduled. Add a prescription to get started.</p>';
+                    return;
+                }
+                container.innerHTML = data.slice(0, 3).map(med => `
+                <div class="bg-[#F5EFE6] rounded-xl p-2.5 flex items-center gap-2">
+                    <div class="w-7 h-7 bg-[#88A68B]/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <iconify-icon icon="lucide:pill" class="text-sm text-[#88A68B]"></iconify-icon>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-xs font-medium text-[#4D6B53] truncate">${med.medicine}</p>
+                        <p class="text-[10px] text-[#6D726D]">${med.date} · ${med.time}</p>
+                    </div>
+                </div>
+            `).join('');
+            } catch (e) {
+                container.innerHTML = '<p class="text-xs text-[#6D726D]">Could not load medicines.</p>';
+            }
+        }
 
-      <!-- New: Indicators Graph -->
-      <div id="summaryGraphs" style="margin-top: 2rem; display:none;">
-        <h3>📊 Key Health Indicators</h3>
-        <p style="font-size:0.9em; color:#666;">Trends from your uploaded lab reports.</p>
-        <div style="height: 300px; margin-top: 1rem;">
-          <canvas id="summaryChart"></canvas>
-        </div>
-      </div>
-    </section>
+        // ---- Medicine Queue (main area) ---
+        async function loadMedicineQueue() {
+            const container = document.getElementById('medicineQueueContainer');
+            try {
+                const res = await fetch(`${API_BASE}/reminders/upcoming`);
+                if (!res.ok) throw new Error('Failed');
+                const data = await res.json();
+                if (!Array.isArray(data) || data.length === 0) {
+                    container.innerHTML = `
+                    <div class="flex flex-col items-center py-10 text-center">
+                        <iconify-icon icon="lucide:pill" class="text-4xl text-[#E8E1D5] mb-3"></iconify-icon>
+                        <p class="text-[#6D726D] font-medium text-sm">No prescriptions yet</p>
+                        <p class="text-xs text-[#B8BFB8] mt-1">Upload a prescription to track your medicines</p>
+                        <a href="prescription.html" class="mt-4 px-4 py-2 bg-[#88A68B] text-white rounded-xl text-xs font-bold hover:bg-[#4D6B53] transition-colors">Upload Prescription</a>
+                    </div>`;
+                    return;
+                }
+                container.innerHTML = data.map((item, idx) => {
+                    const isNext = idx === 0;
+                    return `
+                <div class="flex items-center gap-4 p-4 ${isNext ? 'bg-[#88A68B]/10 border-2 border-[#88A68B]/30' : 'bg-[#FDFBF7] border border-[#F5EFE6]'} rounded-2xl">
+                    <div class="w-10 h-10 ${isNext ? 'bg-[#88A68B]' : 'bg-white'} rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <iconify-icon icon="lucide:pill" class="text-lg ${isNext ? 'text-white' : 'text-[#88A68B]'}"></iconify-icon>
+                    </div>
+                    <div class="flex-1">
+                        <div class="font-bold text-[#2D302D] text-sm">${item.medicine}</div>
+                        <div class="text-xs text-[#6D726D] mt-0.5">${item.instruction || 'As prescribed'}</div>
+                    </div>
+                    <div class="text-right flex-shrink-0">
+                        <div class="font-bold text-sm ${isNext ? 'text-[#4D6B53]' : 'text-[#6D726D]'}">${item.time}</div>
+                        <div class="text-[10px] text-[#B8BFB8]">${item.date}</div>
+                    </div>
+                    ${isNext ? '<span class="px-2 py-0.5 bg-[#88A68B] text-white text-[10px] font-bold rounded-full flex-shrink-0">NEXT</span>' : ''}
+                </div>`;
+                }).join('');
+            } catch (e) {
+                container.innerHTML = `<div class="flex flex-col items-center py-10 text-center">
+                <iconify-icon icon="lucide:pill" class="text-4xl text-[#E8E1D5] mb-3"></iconify-icon>
+                <p class="text-[#6D726D] font-medium text-sm">No prescriptions yet</p>
+                <a href="prescription.html" class="mt-4 px-4 py-2 bg-[#88A68B] text-white rounded-xl text-xs font-bold hover:bg-[#4D6B53] transition-colors">Upload Prescription</a>
+            </div>`;
+            }
+        }
 
-    <!-- Chat Section -->
-    <section class="card">
-      <h2>🤖 Wellbeing Assistant</h2>
-      <p>Ask general questions about sleep, hydration, or daily habits.</p>
-      <div id="chatBox" class="chat"
-        style="background: rgba(255,255,255,0.6); padding: 1rem; border-radius: var(--radius-md);">
-        <div id="chatMessages" class="chat-messages"
-          style="height: 200px; overflow-y: auto; margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
-        </div>
-        <form id="chatForm" class="chat-form" style="display: flex; gap: 0.5rem;">
-          <input id="chatInput" type="text" placeholder="e.g., How can I sleep better?" required />
-          <button type="submit" style="white-space: nowrap;">Send</button>
-        </form>
-      </div>
-    </section>
-  </main>
+        // ---- Health Trends Chart ---
+        async function loadBiomarkerChart() {
+            const canvas = document.getElementById('biomarkerChart');
+            const noDataEl = document.getElementById('biomarkerNoData');
+            try {
+                const res = await fetch(`${API_BASE}/trends`);
+                if (!res.ok) throw new Error('No data');
+                const data = await res.json();
+                const params = data.parameters || [];
+                if (params.length === 0) {
+                    canvas.style.display = 'none';
+                    noDataEl.classList.remove('hidden');
+                    return;
+                }
 
-  <footer>
-    <small>&copy; 2026 Medical Intelligence AI</small>
-  </footer>
+                // Load first 2 parameters for display
+                const colors = ['#88A68B', '#D47B5A', '#A8D1D1', '#E8B86D'];
+                const datasets = [];
+                for (let i = 0; i < Math.min(params.length, 2); i++) {
+                    try {
+                        const r = await fetch(`${API_BASE}/trends/${encodeURIComponent(params[i])}`);
+                        if (!r.ok) continue;
+                        const points = await r.json();
+                        if (points.length > 0) {
+                            datasets.push({
+                                label: params[i],
+                                data: points.map(p => ({ x: p.timestamp, y: p.value })),
+                                borderColor: colors[i],
+                                backgroundColor: colors[i] + '20',
+                                borderWidth: 3,
+                                tension: 0.4,
+                                fill: true,
+                                pointBackgroundColor: colors[i],
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 2,
+                                pointRadius: 5
+                            });
+                        }
+                    } catch (e) { }
+                }
 
-  <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script
-    src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
-  <script src="app.js?v=14"></script>
+                if (datasets.length === 0) {
+                    canvas.style.display = 'none';
+                    noDataEl.classList.remove('hidden');
+                    return;
+                }
+
+                const ctx = canvas.getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: { datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                align: 'end',
+                                labels: { usePointStyle: true, padding: 16, font: { family: 'Outfit', size: 11, weight: '600' }, color: '#6D726D' }
+                            },
+                            tooltip: {
+                                backgroundColor: '#fff',
+                                titleColor: '#2D302D',
+                                bodyColor: '#6D726D',
+                                borderColor: '#F5EFE6',
+                                borderWidth: 1,
+                                padding: 10
+                            }
+                        },
+                        scales: {
+                            x: { type: 'time', time: { unit: 'day' }, grid: { display: false } },
+                            y: { beginAtZero: false, grid: { color: '#F5EFE6', borderDash: [4, 4] } }
+                        }
+                    }
+                });
+            } catch (e) {
+                canvas.style.display = 'none';
+                noDataEl.classList.remove('hidden');
+            }
+        }
+
+        // ---- Chat ----
+        const chatMessages = document.getElementById('chatMessages');
+        const chatInput = document.getElementById('chatInput');
+        const chatSubmitBtn = document.getElementById('chatSubmitBtn');
+
+        const md = window.markdownit ? window.markdownit({ breaks: true, linkify: true }) : null;
+
+        function renderMd(text) {
+            return md ? md.render(text) : text.replace(/\n/g, '<br>');
+        }
+
+        function appendMsg(role, html, isHtml = false) {
+            const wrap = document.createElement('div');
+            if (role === 'user') {
+                wrap.className = 'flex justify-end';
+                wrap.innerHTML = `
+                <div class="bg-[#E29578] text-white p-3.5 max-w-[88%] text-sm font-medium shadow-md rounded-[16px_16px_4px_16px]">
+                    ${isHtml ? html : html.replace(/</g, '&lt;')}
+                </div>`;
+            } else if (role === 'typing') {
+                wrap.className = 'flex items-start gap-2';
+                wrap.id = 'typingIndicator';
+                wrap.innerHTML = `
+                <div class="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                    <iconify-icon icon="fluent:bot-24-filled" class="text-sm text-white"></iconify-icon>
+                </div>
+                <div class="bg-white/10 px-4 py-3 rounded-[16px_16px_16px_4px] flex items-center gap-1.5">
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                </div>`;
+            } else {
+                wrap.className = 'flex items-start gap-2';
+                wrap.innerHTML = `
+                <div class="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                    <iconify-icon icon="fluent:bot-24-filled" class="text-sm text-white"></iconify-icon>
+                </div>
+                <div class="bg-white/10 text-white p-3.5 max-w-[88%] text-sm leading-relaxed rounded-[16px_16px_16px_4px]">
+                    ${isHtml ? html : html.replace(/</g, '&lt;')}
+                </div>`;
+            }
+            chatMessages.appendChild(wrap);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return wrap;
+        }
+
+        async function handleChat() {
+            const q = chatInput.value.trim();
+            if (!q) return;
+            chatInput.value = '';
+            chatSubmitBtn.disabled = true;
+
+            appendMsg('user', q);
+            appendMsg('typing', '');
+
+            try {
+                const res = await fetch(`${API_BASE}/wellbeing-chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: q })
+                });
+                const data = await res.json();
+                const typingEl = document.getElementById('typingIndicator');
+                if (typingEl) typingEl.remove();
+
+                if (!res.ok) throw new Error(data.detail || 'Request failed');
+
+                const rawAns = data.answer || '';
+                // Extract [GRAPH:...] tags
+                const graphMatches = [...rawAns.matchAll(/\[GRAPH:\s*(.*?)\]/g)];
+                const cleanAns = rawAns.replace(/\[GRAPH:\s*.*?\]/g, '').trim();
+
+                appendMsg('assistant', renderMd(cleanAns), true);
+
+                for (const match of graphMatches) {
+                    if (match[1]) await renderChatGraph(match[1].trim());
+                }
+            } catch (err) {
+                const typingEl = document.getElementById('typingIndicator');
+                if (typingEl) typingEl.remove();
+                appendMsg('assistant', `⚠️ ${err.message}`, false);
+            } finally {
+                chatSubmitBtn.disabled = false;
+            }
+        }
+
+        chatSubmitBtn.addEventListener('click', handleChat);
+        chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleChat(); } });
+
+        // Suggested topics
+        document.querySelectorAll('.chat-suggestion').forEach(btn => {
+            btn.addEventListener('click', () => {
+                chatInput.value = btn.dataset.q;
+                handleChat();
+            });
+        });
+
+        // RAG Upload
+        const ragFileInput = document.getElementById('ragFileInput');
+        const btnRagUploadTrigger = document.getElementById('btnRagUploadTrigger');
+        if (btnRagUploadTrigger && ragFileInput) {
+            btnRagUploadTrigger.addEventListener('click', () => ragFileInput.click());
+            ragFileInput.addEventListener('change', async () => {
+                if (!ragFileInput.files.length) return;
+                const fd = new FormData();
+                fd.append('file', ragFileInput.files[0]);
+                btnRagUploadTrigger.innerHTML = '<iconify-icon icon="lucide:loader-2" class="text-lg animate-spin"></iconify-icon>';
+                try {
+                    const res = await fetch(`${API_BASE}/records/upload`, { method: 'POST', body: fd });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.detail || 'Upload failed');
+                    appendMsg('assistant', `✅ **Document uploaded!** ${data.message}`, false);
+                } catch (e) {
+                    appendMsg('assistant', `❌ Upload failed: ${e.message}`, false);
+                } finally {
+                    btnRagUploadTrigger.innerHTML = '<iconify-icon icon="lucide:upload-cloud" class="text-lg"></iconify-icon>';
+                    ragFileInput.value = '';
+                }
+            });
+        }
+
+        async function renderChatGraph(metricName) {
+            const chartId = 'chatChart_' + Date.now();
+            const container = document.createElement('div');
+            container.style.cssText = 'margin-top: 8px; height: 180px; background: rgba(255,255,255,0.1); border-radius: 12px; padding: 8px;';
+            container.innerHTML = `<canvas id="${chartId}"></canvas>`;
+            chatMessages.appendChild(container);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            try {
+                const res = await fetch(`${API_BASE}/trends/${encodeURIComponent(metricName)}`);
+                if (!res.ok) throw new Error();
+                const data = await res.json();
+                if (!Array.isArray(data) || data.length < 2) {
+                    container.innerHTML = `<p style="color:rgba(255,255,255,0.5); font-size:0.75rem; padding:8px;">Not enough data for ${metricName}</p>`;
+                    return;
+                }
+                const ctx = document.getElementById(chartId);
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        datasets: [{
+                            label: metricName, data: data.map(d => ({ x: d.timestamp, y: d.value })),
+                            borderColor: '#88A68B', backgroundColor: 'rgba(136,166,139,0.2)', fill: true, tension: 0.3, pointRadius: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false }, title: { display: true, text: metricName, color: 'rgba(255,255,255,0.7)', font: { size: 11 } } },
+                        scales: {
+                            x: { type: 'time', time: { unit: 'day' }, grid: { display: false }, ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 9 } } },
+                            y: { beginAtZero: false, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)', font: { size: 9 } } }
+                        }
+                    }
+                });
+            } catch (e) {
+                container.innerHTML = `<p style="color:rgba(255,255,255,0.5); font-size:0.75rem; padding:8px;">Could not load graph for ${metricName}</p>`;
+            }
+        }
+
+        // ---- Boot ----
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSidebarReminders();
+            loadMedicineQueue();
+            loadBiomarkerChart();
+        });
+    </script>
 </body>
 
 </html>

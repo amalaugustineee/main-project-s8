@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vitality | Lab Reports</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
+    <link href="https://api.fontshare.com/v2/css?f[]=outfit@300,400,500,600,700&f[]=satoshi@400,500,700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --sage: #88A68B;
+            --sage-dark: #4D6B53;
+            --terracotta: #D47B5A;
+            --mustard: #E8B86D;
+            --cream: #FDFBF7;
+            --beige: #F5EFE6;
+        }
+
+        body {
+            font-family: 'Satoshi', sans-serif;
+            background-color: var(--cream);
+            color: #2D302D;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: var(--sage);
+            border-radius: 10px;
+        }
+
+        /* Markdown */
+        .md-output h2 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: #2D302D;
+            margin: 1.2rem 0 0.5rem;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .md-output h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #4D6B53;
+            margin: 0.8rem 0 0.3rem;
+        }
+
+        .md-output ul {
+            list-style: disc;
+            padding-left: 1.4rem;
+            margin-bottom: 0.6rem;
+        }
+
+        .md-output li {
+            margin-bottom: 0.3rem;
+            font-size: 0.875rem;
+            color: #444;
+        }
+
+        .md-output strong {
+            font-weight: 700;
+        }
+
+        .md-output p {
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+            line-height: 1.7;
+        }
+
+        .upload-zone {
+            border: 2px dashed #B8D4B9;
+            transition: all 0.2s;
+        }
+
+        .upload-zone:hover,
+        .upload-zone.drag-over {
+            border-color: var(--sage);
+            background-color: rgba(136, 166, 139, 0.05);
+        }
+
+        .upload-zone.drag-over {
+            transform: scale(1.01);
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        /* Risk badge colors */
+        .badge-normal {
+            background: #D1FAE5;
+            color: #065F46;
+        }
+
+        .badge-high {
+            background: #FEE2E2;
+            color: #991B1B;
+        }
+
+        .badge-low {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .badge-borderline {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="flex min-h-screen bg-[#FDFBF7]">
+
+        <!-- ===================== SIDEBAR ===================== -->
+        <aside class="sidebar">
+      <style>
+        .sidebar {
+          width: 220px;
+          background: linear-gradient(160deg, #F5EFE6 0%, #F0EBE0 100%);
+          border-right: 1px solid #E8E1D5;
+          display: flex;
+          flex-direction: column;
+          padding: 20px 14px;
+          height: 100vh;
+          position: sticky;
+          top: 0;
+          flex-shrink: 0;
+          z-index: 50;
+        }
+        .sidebar-logo {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 24px;
+          padding: 0 4px;
+        }
+        .sidebar-logo-icon {
+          width: 40px; height: 40px;
+          background: linear-gradient(135deg, #88A68B 0%, #4D6B53 100%);
+          border-radius: 14px;
+          display: flex; align-items: center; justify-content: center;
+          color: white; font-size: 20px;
+          box-shadow: 0 4px 12px rgba(77,107,83,0.3);
+          flex-shrink: 0;
+        }
+        .sidebar-logo-text {
+          font-family: 'Outfit', sans-serif;
+          font-size: 18px;
+          font-weight: 700;
+          color: #4D6B53;
+          letter-spacing: -0.3px;
+        }
+        .sidebar-logo-sub {
+          font-size: 9px;
+          color: #8B9E8C;
+          font-family: 'Satoshi', sans-serif;
+          font-weight: 500;
+          text-transform: uppercase;
+          letter-spacing: 0.8px;
+          margin-top: -2px;
+        }
+        .nav-section-label {
+          font-size: 9px;
+          font-weight: 700;
+          color: #B5AEA3;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          padding: 0 8px;
+          margin: 4px 0 6px;
+        }
+        .nav-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 9px 10px;
+          border-radius: 16px;
+          text-decoration: none;
+          color: #6D726D;
+          position: relative;
+          transition: all 0.2s ease;
+          margin-bottom: 3px;
+          font-family: 'Satoshi', sans-serif;
+          font-size: 13px;
+          font-weight: 500;
+        }
+        .nav-active {
+          font-weight: 700;
+        }
+        .nav-icon {
+          width: 30px; height: 30px;
+          border-radius: 10px;
+          display: flex; align-items: center; justify-content: center;
+          color: white;
+          font-size: 14px;
+          flex-shrink: 0;
+          transition: background 0.2s;
+        }
+        .nav-label {
+          flex: 1;
+          transition: color 0.2s;
+        }
+        .nav-dot {
+          width: 6px; height: 6px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+        .sidebar-footer {
+          margin-top: auto;
+          padding: 12px 8px 0;
+          border-top: 1px solid #E8E1D5;
+        }
+        .sidebar-badge {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px;
+          background: linear-gradient(135deg, rgba(136,166,139,0.15) 0%, rgba(77,107,83,0.08) 100%);
+          border-radius: 14px;
+          border: 1px solid rgba(136,166,139,0.2);
+        }
+        .sidebar-badge-icon {
+          width: 28px; height: 28px;
+          background: linear-gradient(135deg, #88A68B 0%, #4D6B53 100%);
+          border-radius: 8px;
+          display: flex; align-items: center; justify-content: center;
+          color: white; font-size: 12px; flex-shrink: 0;
+        }
+        .sidebar-badge-text {
+          font-size: 10px; line-height: 1.4;
+          font-family: 'Satoshi', sans-serif;
+        }
+        .sidebar-badge-text strong {
+          display: block; color: #4D6B53; font-weight: 700; font-size: 10.5px;
+        }
+        .sidebar-badge-text span {
+          color: #8B9E8C;
+        }
+      </style>
+
+      <!-- Logo -->
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">
+          <iconify-icon icon="lucide:heart-pulse"></iconify-icon>
+        </div>
+        <div>
+          <div class="sidebar-logo-text">Vitality</div>
+          <div class="sidebar-logo-sub">Health AI</div>
+        </div>
+      </div>
+
+      <!-- Navigation -->
+      <div class="nav-section-label">Navigation</div>
+      <nav style="flex:1">
+        <a href="index.html" class="nav-item" data-color="#7C6EBA" data-bg="#EDE9F9"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:layout-dashboard"></iconify-icon>
+          </span>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a href="prescription.html" class="nav-item" data-color="#D47B5A" data-bg="#FBF0EC"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:pill"></iconify-icon>
+          </span>
+          <span class="nav-label">Prescriptions</span>
+        </a>
+        <a href="labreports.html" class="nav-item nav-active" style="background:#EBF3FA; color:#5B8DB8">
+          <span class="nav-icon" style="background:#5B8DB8">
+            <iconify-icon icon="lucide:microscope"></iconify-icon>
+          </span>
+          <span class="nav-label">Lab Reports</span>
+          <span class="nav-dot" style="background:#5B8DB8"></span>
+        </a>
+        <a href="diet.html" class="nav-item" data-color="#88A68B" data-bg="#EDF3EE"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:salad"></iconify-icon>
+          </span>
+          <span class="nav-label">Meal Planner</span>
+        </a>
+        <a href="trends.html" class="nav-item" data-color="#E8B86D" data-bg="#FDF5E8"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:trending-up"></iconify-icon>
+          </span>
+          <span class="nav-label">Trends</span>
+        </a>
+        <a href="summary.html" class="nav-item" data-color="#4D9B8A" data-bg="#E8F5F3"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:shield-check"></iconify-icon>
+          </span>
+          <span class="nav-label">Health Summary</span>
+        </a>
+      </nav>
+
+      <!-- Footer badge -->
+      <div class="sidebar-footer">
+        <div class="sidebar-badge">
+          <div class="sidebar-badge-icon">
+            <iconify-icon icon="lucide:sparkles"></iconify-icon>
+          </div>
+          <div class="sidebar-badge-text">
+            <strong>AI Powered</strong>
+            <span>Local LLM · Private</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+        <!-- ===================== MAIN CONTENT ===================== -->
+        <main class="flex-1 p-8 overflow-y-auto custom-scrollbar">
+
+            <!-- Header -->
+            <header class="flex items-center justify-between mb-8">
+                <div>
+                    <h1 class="text-3xl font-bold text-[#2D302D] mb-1">Lab Reports</h1>
+                    <p class="text-[#6D726D]">Upload and analyze your lab results with AI</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <a href="trends.html"
+                        class="flex items-center gap-2 px-5 py-2.5 bg-[#E8B86D] text-white rounded-2xl font-bold text-sm hover:bg-[#C89B55] transition-all shadow-md">
+                        <iconify-icon icon="lucide:trending-up"></iconify-icon>
+                        View Trends
+                    </a>
+                    <a href="summary.html"
+                        class="flex items-center gap-2 px-5 py-2.5 bg-[#4D6B53] text-white rounded-2xl font-bold text-sm hover:bg-[#88A68B] transition-all shadow-md">
+                        <iconify-icon icon="lucide:shield-check"></iconify-icon>
+                        Health Summary
+                    </a>
+                </div>
+            </header>
+
+            <!-- Upload Zone -->
+            <section class="bg-white rounded-[32px] p-8 shadow-xl shadow-black/5 border border-[#F5EFE6] mb-6">
+                <h2 class="text-xl font-bold text-[#2D302D] mb-2 flex items-center gap-2">
+                    <iconify-icon icon="lucide:upload" class="text-[#88A68B]"></iconify-icon>
+                    Upload Lab Report
+                </h2>
+                <p class="text-sm text-[#6D726D] mb-6">Upload a lab report image or PDF. The AI will extract biomarkers,
+                    assess risks, and provide personalized recommendations.</p>
+
+                <form id="formLabReport" class="space-y-4">
+                    <!-- Drop Zone -->
+                    <div id="uploadDropZone" class="upload-zone rounded-2xl p-10 text-center cursor-pointer w-full">
+                        <iconify-icon icon="lucide:microscope"
+                            class="text-5xl text-[#88A68B]/40 mb-3 block"></iconify-icon>
+                        <p class="font-bold text-[#4D6B53] mb-1">Drop your lab report here</p>
+                        <p class="text-sm text-[#6D726D] mb-4">Supports: JPG, PNG, PDF</p>
+                        <input type="file" id="labReportFile" name="file" accept="image/*,.pdf" class="hidden">
+                        <button type="button" id="btnBrowse"
+                            class="px-6 py-2.5 bg-[#88A68B] text-white rounded-2xl font-bold text-sm hover:bg-[#4D6B53] transition-colors">
+                            Browse File
+                        </button>
+                        <p id="selectedFileName" class="mt-3 text-sm font-medium text-[#4D6B53] hidden"></p>
+                    </div>
+
+                    <button type="submit" id="btnAnalyze"
+                        class="w-full py-4 bg-[#4D6B53] hover:bg-[#88A68B] text-white rounded-2xl font-bold text-base transition-all shadow-lg disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                        <iconify-icon icon="lucide:sparkles"></iconify-icon>
+                        Analyze with AI
+                    </button>
+                </form>
+            </section>
+
+            <!-- Analysis Result -->
+            <section id="analysisResultSection" class="hidden mb-6">
+                <div class="bg-white rounded-[32px] p-8 shadow-xl shadow-black/5 border border-[#F5EFE6]">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-bold text-[#2D302D] flex items-center gap-2">
+                            <iconify-icon icon="lucide:activity" class="text-[#88A68B]"></iconify-icon>
+                            Analysis Results
+                        </h2>
+                        <button id="btnSaveReport"
+                            class="flex items-center gap-2 px-4 py-2 bg-[#88A68B] text-white rounded-xl font-bold text-sm hover:bg-[#4D6B53] transition-colors">
+                            <iconify-icon icon="lucide:save"></iconify-icon>
+                            Save Report
+                        </button>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="analysisLoading" class="flex flex-col items-center py-12 text-center">
+                        <iconify-icon icon="lucide:loader-2"
+                            class="text-4xl text-[#88A68B] loading-spinner mb-4"></iconify-icon>
+                        <p class="font-bold text-[#4D6B53]">Analyzing your lab report…</p>
+                        <p class="text-sm text-[#6D726D] mt-1">AI is processing your data</p>
+                    </div>
+
+                    <!-- Result Content (filled by JS) -->
+                    <div id="analysisContent" class="hidden">
+                        <!-- Risk Level Banner -->
+                        <div id="riskBanner" class="rounded-2xl p-5 mb-6 flex items-center gap-4"></div>
+
+                        <!-- Biomarkers Table -->
+                        <div id="biomarkersTable" class="mb-6"></div>
+
+                        <!-- AI Insights (markdown) -->
+                        <div id="aiInsights" class="bg-[#FDFBF7] rounded-2xl p-6 border border-[#F5EFE6]">
+                            <h3 class="text-base font-bold text-[#2D302D] mb-3 flex items-center gap-2">
+                                <iconify-icon icon="fluent:bot-24-filled" class="text-[#4D6B53]"></iconify-icon>
+                                AI Health Insights
+                            </h3>
+                            <div id="aiInsightsContent" class="md-output text-sm leading-relaxed"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reports History -->
+            <section class="bg-white rounded-[32px] p-8 shadow-xl shadow-black/5 border border-[#F5EFE6]">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-xl font-bold text-[#2D302D] flex items-center gap-2">
+                        <iconify-icon icon="lucide:clock" class="text-[#E8B86D]"></iconify-icon>
+                        Report History
+                    </h2>
+                    <button id="btnRefreshHistory"
+                        class="flex items-center gap-1 text-sm text-[#88A68B] font-bold hover:underline">
+                        <iconify-icon icon="lucide:refresh-cw" class="text-sm"></iconify-icon>
+                        Refresh
+                    </button>
+                </div>
+                <div id="reportHistoryContainer">
+                    <div class="flex items-center justify-center py-10 text-[#B8BFB8]">
+                        <iconify-icon icon="lucide:loader-2" class="text-2xl loading-spinner mr-2"></iconify-icon>
+                        <span class="text-sm">Loading history…</span>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = localStorage.getItem('apiBase') || 'http://127.0.0.1:8000';
+        const md = window.markdownit ? window.markdownit({ breaks: true, linkify: true }) : null;
+        function renderMd(text) { return md ? md.render(text) : text.replace(/\n/g, '<br>'); }
+
+        // ---- Upload Zone ----
+        const dropZone = document.getElementById('uploadDropZone');
+        const fileInput = document.getElementById('labReportFile');
+        const btnBrowse = document.getElementById('btnBrowse');
+        const fileNameEl = document.getElementById('selectedFileName');
+        let currentAnalysis = null;
+        let currentFile = null;
+        let riskChartInst = null;
+
+        btnBrowse.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+        });
+        fileInput.addEventListener('change', () => { if (fileInput.files.length) setFile(fileInput.files[0]); });
+
+        function setFile(f) {
+            currentFile = f;
+            fileNameEl.textContent = '📎 ' + f.name;
+            fileNameEl.classList.remove('hidden');
+        }
+
+        // ---- Analyze ----
+        const formLabReport = document.getElementById('formLabReport');
+        const analysisResultSection = document.getElementById('analysisResultSection');
+        const analysisLoading = document.getElementById('analysisLoading');
+        const analysisContent = document.getElementById('analysisContent');
+        const btnAnalyze = document.getElementById('btnAnalyze');
+
+        formLabReport.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentFile) { alert('Please select a lab report file first.'); return; }
+
+            btnAnalyze.disabled = true;
+            btnAnalyze.innerHTML = '<iconify-icon icon="lucide:loader-2" class="loading-spinner"></iconify-icon> Analyzing…';
+
+            analysisResultSection.classList.remove('hidden');
+            analysisLoading.classList.remove('hidden');
+            analysisContent.classList.add('hidden');
+
+            setTimeout(() => analysisResultSection.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+
+            const fd = new FormData();
+            fd.append('file', currentFile);
+
+            try {
+                const res = await fetch(`${API_BASE}/healthrisk`, { method: 'POST', body: fd });
+                if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Analysis failed'); }
+                const data = await res.json();
+                currentAnalysis = data;
+                renderAnalysis(data);
+                // Auto-save to DB so it appears in Trends
+                await autoSaveReport(data);
+            } catch (err) {
+                analysisLoading.classList.add('hidden');
+                analysisContent.classList.remove('hidden');
+                document.getElementById('riskBanner').innerHTML = `
+            <iconify-icon icon="lucide:alert-circle" class="text-3xl text-red-500"></iconify-icon>
+            <div><p class="font-bold text-red-700">Analysis Failed</p><p class="text-sm text-red-600">${err.message}</p></div>`;
+                document.getElementById('biomarkersTable').innerHTML = '';
+                document.getElementById('aiInsightsContent').innerHTML = '';
+            } finally {
+                btnAnalyze.disabled = false;
+                btnAnalyze.innerHTML = '<iconify-icon icon="lucide:sparkles"></iconify-icon> Analyze with AI';
+            }
+        });
+
+        // Auto-save after every analysis (so it shows in trends)
+        async function autoSaveReport(data) {
+            try {
+                const payload = { analysis_result: data };
+                const res = await fetch(`${API_BASE}/reports/save`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    const saveBtn = document.getElementById('btnSaveReport');
+                    saveBtn.innerHTML = '<iconify-icon icon="lucide:check"></iconify-icon> Saved to Trends!';
+                    saveBtn.classList.replace('bg-[#88A68B]', 'bg-green-500');
+                    saveBtn.disabled = true;
+                    loadReportHistory();
+                    setTimeout(() => {
+                        saveBtn.innerHTML = '<iconify-icon icon="lucide:save"></iconify-icon> Save Again';
+                        saveBtn.classList.replace('bg-green-500', 'bg-[#88A68B]');
+                        saveBtn.disabled = false;
+                    }, 4000);
+                }
+            } catch (err) {
+                console.warn('Auto-save failed:', err);
+            }
+        }
+
+        function renderAnalysis(data) {
+            analysisLoading.classList.add('hidden');
+            analysisContent.classList.remove('hidden');
+
+            // The API returns: { summary, tests: [{name, current_value, safe_range, risk_percent, risk_reason, pubmed_support}] }
+            const tests = data.tests || [];
+
+            // Determine overall risk level from highest risk_percent
+            const maxRisk = tests.length > 0 ? Math.max(...tests.map(t => t.risk_percent || 0)) : 0;
+            const overallRiskLevel = maxRisk >= 70 ? 'high' : maxRisk >= 40 ? 'borderline' : 'normal';
+
+            const riskColors = {
+                high: { bg: '#FEE2E2', border: '#FECACA', text: '#991B1B', icon: 'lucide:alert-triangle', label: 'High Risk' },
+                borderline: { bg: '#FEF3C7', border: '#FDE68A', text: '#92400E', icon: 'lucide:alert-circle', label: 'Borderline' },
+                normal: { bg: '#D1FAE5', border: '#A7F3D0', text: '#065F46', icon: 'lucide:check-circle', label: 'Normal Range' }
+            };
+            const rc = riskColors[overallRiskLevel];
+            const riskBanner = document.getElementById('riskBanner');
+            riskBanner.style.cssText = `background: ${rc.bg}; border: 1px solid ${rc.border};`;
+            riskBanner.innerHTML = `
+        <iconify-icon icon="${rc.icon}" style="color:${rc.text}" class="text-4xl flex-shrink-0"></iconify-icon>
+        <div>
+            <p class="font-bold text-lg" style="color:${rc.text}">${rc.label}</p>
+            <p class="text-sm" style="color:${rc.text}">${data.summary || 'Analysis complete.'}</p>
+        </div>`;
+
+            // ---- Biomarkers Table ----
+            if (tests.length > 0) {
+                const rows = tests.map(t => {
+                    const rp = t.risk_percent || 0;
+                    const badgeClass = rp >= 70 ? 'badge-high' : rp >= 40 ? 'badge-borderline' : 'badge-normal';
+                    const statusLabel = rp >= 70 ? 'High Risk' : rp >= 40 ? 'Borderline' : 'Normal';
+                    const rawVal = String(t.current_value || '');
+                    return `<tr class="border-b border-[#F5EFE6] last:border-0">
+                <td class="py-3 px-4 font-medium text-[#2D302D] text-sm">${t.name || '—'}</td>
+                <td class="py-3 px-4 text-sm text-[#2D302D] font-bold">${rawVal}</td>
+                <td class="py-3 px-4 text-xs text-[#6D726D]">${t.safe_range || '—'}</td>
+                <td class="py-3 px-4">
+                    <div class="flex items-center gap-2">
+                        <div class="flex-1 h-1.5 bg-[#F5EFE6] rounded-full overflow-hidden" style="min-width:60px">
+                            <div class="h-full rounded-full" style="width:${rp}%; background:${rp >= 70 ? '#D47B5A' : rp >= 40 ? '#E8B86D' : '#88A68B'}"></div>
+                        </div>
+                        <span class="px-2.5 py-1 rounded-full text-xs font-bold ${badgeClass} whitespace-nowrap">${statusLabel} (${rp}%)</span>
+                    </div>
+                </td>
+            </tr>`;
+                }).join('');
+                document.getElementById('biomarkersTable').innerHTML = `
+            <div class="overflow-x-auto rounded-2xl border border-[#F5EFE6] mb-6">
+                <table class="w-full bg-white">
+                    <thead class="bg-[#F5EFE6]">
+                        <tr>
+                            <th class="py-3 px-4 text-left text-xs font-bold text-[#4D6B53] uppercase">Biomarker</th>
+                            <th class="py-3 px-4 text-left text-xs font-bold text-[#4D6B53] uppercase">Value</th>
+                            <th class="py-3 px-4 text-left text-xs font-bold text-[#4D6B53] uppercase">Safe Range</th>
+                            <th class="py-3 px-4 text-left text-xs font-bold text-[#4D6B53] uppercase">Risk Level</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>`;
+
+                // ---- Risk Bar Chart ----
+                renderRiskChart(tests);
+            } else {
+                document.getElementById('biomarkersTable').innerHTML = '<p class="text-sm text-[#6D726D]">No test results found in this report.</p>';
+            }
+
+            // ---- AI Summary / Insights ----
+            let insightMd = '';
+            if (data.summary) {
+                insightMd += `**Overview:** ${data.summary}\n\n`;
+            }
+            if (tests.length > 0) {
+                insightMd += `**Detailed Findings:**\n`;
+                tests.forEach(t => {
+                    const rp = t.risk_percent || 0;
+                    const label = rp >= 70 ? '🔴 High Risk' : rp >= 40 ? '🟡 Borderline' : '🟢 Normal';
+                    insightMd += `- **${t.name}** (${t.current_value || '—'}): ${label} — ${t.risk_reason || 'Within expected range.'}\n`;
+                });
+            }
+            document.getElementById('aiInsightsContent').innerHTML = insightMd ? renderMd(insightMd) : '<p class="text-[#6D726D]">Analysis complete.</p>';
+
+            // ---- PubMed Research ----
+            const supportedTests = tests.filter(t => t.pubmed_support && t.pubmed_support.length > 0);
+            if (supportedTests.length > 0) {
+                let pubmedHtml = '<div class="mt-4 pt-4 border-t border-[#F5EFE6]"><h4 class="text-sm font-bold text-[#4D6B53] mb-3 flex items-center gap-1"><iconify-icon icon="lucide:book-open" class="text-sm"></iconify-icon> Research Citations</h4><div class="space-y-2">';
+                supportedTests.forEach(t => {
+                    t.pubmed_support.slice(0, 2).forEach(article => {
+                        pubmedHtml += `<a href="${article.url}" target="_blank" rel="noopener" class="flex items-start gap-2 p-3 bg-white border border-[#F5EFE6] rounded-xl hover:border-[#88A68B] transition-colors">
+                            <iconify-icon icon="lucide:external-link" class="text-[#88A68B] text-sm flex-shrink-0 mt-0.5"></iconify-icon>
+                            <div><p class="text-xs font-bold text-[#2D302D] leading-snug">${article.title || 'View article'}</p><p class="text-[10px] text-[#6D726D]">${article.source || ''} · ${article.pubdate || ''}</p></div>
+                        </a>`;
+                    });
+                });
+                pubmedHtml += '</div></div>';
+                document.getElementById('aiInsights').insertAdjacentHTML('beforeend', pubmedHtml);
+            }
+        }
+
+        // ---- Risk Bar Chart ----
+        function renderRiskChart(tests) {
+            let chartWrapper = document.getElementById('riskChartWrapper');
+            if (!chartWrapper) {
+                chartWrapper = document.createElement('div');
+                chartWrapper.id = 'riskChartWrapper';
+                chartWrapper.className = 'mb-6 bg-[#FDFBF7] rounded-2xl p-6 border border-[#F5EFE6]';
+                chartWrapper.innerHTML = `
+                    <h3 class="text-sm font-bold text-[#2D302D] mb-4 flex items-center gap-2">
+                        <iconify-icon icon="lucide:bar-chart-2" class="text-[#88A68B]"></iconify-icon>
+                        Biomarker Risk Overview
+                    </h3>
+                    <div id="riskChartBox" style="height:${Math.max(180, tests.length * 36)}px">
+                        <canvas id="riskBarChart"></canvas>
+                    </div>`;
+                document.getElementById('riskBanner').after(chartWrapper);
+            } else {
+                document.getElementById('riskChartBox').style.height = Math.max(180, tests.length * 36) + 'px';
+            }
+
+            const ctx = document.getElementById('riskBarChart').getContext('2d');
+            if (riskChartInst) riskChartInst.destroy();
+
+            const labels = tests.map(t => t.name || '?');
+            const values = tests.map(t => t.risk_percent || 0);
+            const colors = values.map(v => v >= 70 ? '#D47B5A' : v >= 40 ? '#E8B86D' : '#88A68B');
+
+            riskChartInst = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Risk %',
+                        data: values,
+                        backgroundColor: colors,
+                        borderRadius: 8,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => ` ${ctx.raw}% risk${tests[ctx.dataIndex]?.risk_reason ? ' — ' + tests[ctx.dataIndex].risk_reason : ''}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            min: 0, max: 100,
+                            grid: { color: '#F5EFE6' },
+                            ticks: { callback: v => v + '%', font: { family: 'Satoshi' } }
+                        },
+                        y: { grid: { display: false }, ticks: { font: { family: 'Satoshi', size: 11 } } }
+                    }
+                }
+            });
+        }
+
+        // ---- Save Report (manual re-save) ----
+        document.getElementById('btnSaveReport').addEventListener('click', async () => {
+            if (!currentAnalysis) return;
+            const btn = document.getElementById('btnSaveReport');
+            btn.disabled = true;
+            btn.textContent = 'Saving…';
+            try {
+                const payload = { analysis_result: currentAnalysis };
+                const res = await fetch(`${API_BASE}/reports/save`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Save failed'); }
+                btn.innerHTML = '<iconify-icon icon="lucide:check"></iconify-icon> Saved!';
+                btn.classList.replace('bg-[#88A68B]', 'bg-green-500');
+                loadReportHistory();
+                setTimeout(() => {
+                    btn.innerHTML = '<iconify-icon icon="lucide:save"></iconify-icon> Save Report';
+                    btn.classList.replace('bg-green-500', 'bg-[#88A68B]');
+                    btn.disabled = false;
+                }, 3000);
+            } catch (err) {
+                alert('Save failed: ' + err.message);
+                btn.innerHTML = '<iconify-icon icon="lucide:save"></iconify-icon> Save Report';
+                btn.disabled = false;
+            }
+        });
+
+        // ---- Report History ----
+        async function loadReportHistory() {
+            const container = document.getElementById('reportHistoryContainer');
+            try {
+                const res = await fetch(`${API_BASE}/reports/history`);
+                if (!res.ok) throw new Error('Failed to load');
+                const data = await res.json();
+                const reports = Array.isArray(data) ? data : (data.reports || []);
+                if (reports.length === 0) {
+                    container.innerHTML = `
+                <div class="flex flex-col items-center py-10 text-center">
+                    <iconify-icon icon="lucide:file-text" class="text-4xl text-[#E8E1D5] mb-3"></iconify-icon>
+                    <p class="text-[#6D726D] font-medium">No reports saved yet</p>
+                    <p class="text-xs text-[#B8BFB8] mt-1">Upload a lab report — it will auto-save here</p>
+                </div>`;
+                    return;
+                }
+                container.innerHTML = reports.map(r => {
+                    const created = r.created_at ? new Date(r.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
+                    const testCount = (r.test_results || []).length;
+                    const maxRisk = testCount > 0 ? Math.max(...r.test_results.map(t => t.risk_percent || 0)) : 0;
+                    const riskLabel = maxRisk >= 70 ? 'High Risk' : maxRisk >= 40 ? 'Borderline' : 'Normal';
+                    const badgeClass = maxRisk >= 70 ? 'badge-high' : maxRisk >= 40 ? 'badge-borderline' : 'badge-normal';
+                    return `
+            <div class="flex items-start gap-4 p-5 bg-[#FDFBF7] rounded-2xl border border-[#F5EFE6] mb-3 hover:border-[#88A68B] transition-colors">
+                <div class="w-12 h-12 bg-[#88A68B]/10 rounded-2xl flex items-center justify-center flex-shrink-0">
+                    <iconify-icon icon="lucide:microscope" class="text-xl text-[#88A68B]"></iconify-icon>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1 flex-wrap">
+                        <h3 class="font-bold text-[#2D302D] text-sm">Lab Report #${r.id}</h3>
+                        <span class="px-2 py-0.5 rounded-full text-xs font-bold ${badgeClass}">${riskLabel}</span>
+                    </div>
+                    <p class="text-xs text-[#6D726D]">${created} · ${testCount} biomarker${testCount !== 1 ? 's' : ''} tracked</p>
+                    ${r.summary ? `<p class="text-xs text-[#6D726D] mt-1 line-clamp-2">${r.summary.replace(/[#*\`_]/g, '').substring(0, 130)}…</p>` : ''}
+                </div>
+                <div class="flex-shrink-0">
+                    <a href="trends.html" class="text-xs text-[#88A68B] font-bold hover:underline flex items-center gap-1">
+                        <iconify-icon icon="lucide:trending-up" class="text-xs"></iconify-icon>Trends
+                    </a>
+                </div>
+            </div>`;
+                }).join('');
+            } catch (e) {
+                container.innerHTML = `
+            <div class="flex flex-col items-center py-10 text-center">
+                <iconify-icon icon="lucide:file-text" class="text-4xl text-[#E8E1D5] mb-3"></iconify-icon>
+                <p class="text-[#6D726D] font-medium">Could not load report history</p>
+            </div>`;
+            }
+        }
+
+        document.getElementById('btnRefreshHistory').addEventListener('click', loadReportHistory);
+
+        // ---- RAG Upload ----
+        const ragFileInput = document.getElementById('ragFileInput');
+        const btnRagUpload = document.getElementById('btnRagUpload');
+        const ragUploadMsg = document.getElementById('ragUploadMsg');
+
+        btnRagUpload.addEventListener('click', () => ragFileInput.click());
+        ragFileInput.addEventListener('change', async () => {
+            if (!ragFileInput.files.length) return;
+            const fd = new FormData();
+            fd.append('file', ragFileInput.files[0]);
+            btnRagUpload.innerHTML = '<iconify-icon icon="lucide:loader-2" class="loading-spinner text-sm"></iconify-icon> Uploading…';
+            btnRagUpload.disabled = true;
+            try {
+                const res = await fetch(`${API_BASE}/records/upload`, { method: 'POST', body: fd });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.detail || 'Upload failed');
+                ragUploadMsg.textContent = '✅ ' + (data.message || 'Uploaded successfully!');
+                ragUploadMsg.classList.remove('hidden');
+                setTimeout(() => ragUploadMsg.classList.add('hidden'), 4000);
+            } catch (err) {
+                ragUploadMsg.textContent = '❌ ' + err.message;
+                ragUploadMsg.classList.remove('hidden');
+            } finally {
+                btnRagUpload.innerHTML = '<iconify-icon icon="lucide:upload-cloud" class="text-sm"></iconify-icon> Upload Document';
+                btnRagUpload.disabled = false;
+                ragFileInput.value = '';
+            }
+        });
+
+        // ---- Boot ----
+        document.addEventListener('DOMContentLoaded', loadReportHistory);
+    </script>
+</body>
+
+</html>

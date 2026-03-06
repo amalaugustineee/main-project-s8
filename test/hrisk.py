@@ -9,22 +9,16 @@ from pdf2image import convert_from_path
 from PIL import Image
 import pytesseract
 import shutil
-import re 
-from google import genai
+import re
+
+# Local LLM (replaces Google Gemini)
+from llm_local import llm_generate
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
-
-# ---------- CONFIG ----------
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-
-# Initialize Gemini Client
-client = None
-if GEMINI_API_KEY:
-    client = genai.Client(api_key=GEMINI_API_KEY)
 
 # NCBI Endpoints
 NCBI_ESearch = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
@@ -37,24 +31,21 @@ NCBI_API_KEY = ""
 def ocr_file(path):
     ext = os.path.splitext(path)[1].lower()
 
-    # Ensure Tesseract is available on Windows. Allow override via TESSERACT_CMD env var.
+    # Ensure Tesseract is available. Allow override via TESSERACT_CMD env var.
     tcmd_env = os.getenv("TESSERACT_CMD")
     if tcmd_env:
         pytesseract.pytesseract.tesseract_cmd = tcmd_env
 
-    # If pytesseract's tesseract_cmd is not set or not found on PATH, try to detect it
     tcmd = getattr(pytesseract.pytesseract, 'tesseract_cmd', None)
     if not tcmd or not shutil.which(os.path.basename(tcmd)):
-        # Try to find tesseract on PATH
         found = shutil.which('tesseract')
         if found:
             pytesseract.pytesseract.tesseract_cmd = found
         else:
             raise EnvironmentError(
                 "Tesseract executable not found.\n"
-                "On Windows, install Tesseract OCR (https://github.com/tesseract-ocr/tesseract),\n"
-                "then either add its installation folder to your PATH or set the environment variable TESSERACT_CMD\n"
-                "to the full path to tesseract.exe. After that, run `tesseract --version` in cmd.exe to verify."
+                "Install Tesseract OCR and ensure it's on PATH, "
+                "or set TESSERACT_CMD to the full path."
             )
     if ext == ".pdf":
         pages = convert_from_path(path, dpi=300)
@@ -66,29 +57,18 @@ def ocr_file(path):
         img = Image.open(path)
         return pytesseract.image_to_string(img)
 
-# ---------- GEMINI ----------
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
-
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=5, max=30),
-    retry=retry_if_exception_type(Exception)
-)
-def analyze_with_gemini(ocr_text):
+# ---------- LOCAL LLM ANALYSIS ----------
+def analyze_with_llm(ocr_text):
     """
-    Sends OCR text to Gemini and asks for structured JSON-like output.
-    Returns structured analysis of lab report values and risks.
+    Sends OCR text to local LLM and returns structured JSON analysis of lab report values and risks.
     """
-    if not client:
-        raise ValueError("GEMINI_API_KEY environment variable not set or client init failed")
-
     prompt = f"""
     You are a medical data analysis model. The following text is an OCR extraction from a patient's lab report.
     
     Your task:
     1. Identify each test and its current value with units.
     2. Compare each value with the safe/normal range.
-    3. Assign a health risk percentage (0–100%) based on how far it deviates from normal.
+    3. Assign a health risk percentage (0-100%) based on how far it deviates from normal.
     4. Give a short reason (using the test value).
     5. Output in **strict JSON** with the following structure:
     
@@ -113,23 +93,13 @@ def analyze_with_gemini(ocr_text):
     """
 
     try:
-        response = client.models.generate_content(
-            model="gemini-2.5-flash-preview-09-2025",
-            contents=prompt
-        )
-
-        text = response.text.strip()
-        # Use re.sub to strip markdown code fences (```json or ```) that the model might add
-        fixed = re.sub(r"^\s*```json\s*|\s*```\s*$", "", text, flags=re.MULTILINE).strip()
-        parsed = json.loads(fixed)
+        parsed = llm_generate(prompt, json_mode=True)
         return parsed
-
     except json.JSONDecodeError as e:
-        # Re-raise with context if parsing fails
-        logging.error(f"Failed to parse JSON response from Gemini. Text was: {text[:500]}...")
-        raise json.JSONDecodeError(f"Gemini response not strict JSON: {e}", doc=text, pos=0)
+        logging.error(f"Failed to parse JSON response from LLM: {e}")
+        raise
     except Exception as e:
-        logging.error(f"Gemini analysis failed: {e}")
+        logging.error(f"Local LLM analysis failed: {e}")
         raise
 
 # ---------- PUBMED ----------
@@ -191,21 +161,20 @@ def analyze_labreport(path):
     if not ocr_text.strip():
         raise ValueError("OCR produced no text. Check if the file is valid and readable.")
     
-    logging.info("🧠 Sending to Gemini for structured analysis...")
+    logging.info("🧠 Sending to local LLM for structured analysis...")
     try:
-        gemini_output = analyze_with_gemini(ocr_text)
+        llm_output = analyze_with_llm(ocr_text)
     except Exception as e:
-        logging.error(f"Gemini analysis failed: {e}")
+        logging.error(f"Local LLM analysis failed: {e}")
         raise
     
-    tests = gemini_output.get("tests", [])
+    tests = llm_output.get("tests", [])
     if not tests:
         logging.warning("No test results found in the analysis")
     
     # Enrich each test with PubMed research
     for t in tests:
         name = t.get("name", "")
-        # logging.info(f"📚 Looking up PubMed for: {name}")
         try:
             articles = fetch_pubmed_articles(name)
             t["pubmed_support"] = articles
@@ -214,10 +183,7 @@ def analyze_labreport(path):
             t["pubmed_support"] = []
     
     logging.info("\n===== Health Risk Analysis =====")
-    # Print the final result in a safe way if needed
-    # print(json.dumps(gemini_output, indent=2))
-    
-    return gemini_output
+    return llm_output
 
 # ---------- RUN ----------
 if __name__ == "__main__":
@@ -239,7 +205,6 @@ if __name__ == "__main__":
         logging.error(f"Error: {e}")
         sys.exit(3)
     except EnvironmentError as e:
-        # Catches Tesseract environment issues AND the final error raised from main
         logging.error(f"Environment Error: {e}")
         sys.exit(4)
     except Exception as e:

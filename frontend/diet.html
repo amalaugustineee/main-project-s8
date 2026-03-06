@@ -1,65 +1,994 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Diet Plan | Medical Intelligence</title>
-  <link rel="stylesheet" href="styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vitality | Meal Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
+    <link href="https://api.fontshare.com/v2/css?f[]=outfit@300,400,500,600,700&f[]=satoshi@400,500,700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --sage: #6B9F6F;
+            --sage-dark: #4D6B53;
+            --orange: #E8956B;
+            --terracotta: #B85C3C;
+            --cream: #F5F1E8;
+            --brown: #8B7355;
+        }
+
+        body {
+            font-family: 'Satoshi', sans-serif;
+            background-color: var(--cream);
+            color: #2D302D;
+            margin: 0;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            font-family: 'Outfit', sans-serif;
+            letter-spacing: -0.02em;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: var(--sage);
+            border-radius: 10px;
+        }
+
+        .card-shadow {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .meal-card-hover:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 20px rgba(0, 0, 0, 0.07);
+            transition: all 0.3s;
+        }
+
+        .glass-water {
+            background: linear-gradient(180deg, rgba(168, 213, 226, 0.4) 0%, rgba(168, 213, 226, 0.8) 100%);
+            transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .input-range {
+            accent-color: var(--sage);
+        }
+
+        .nutrition-label {
+            border: 1px solid #000;
+            padding: 8px;
+            font-family: 'Arial Black', sans-serif;
+        }
+
+        .chat-area::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .chat-area::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 10px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .spin {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes bounce {
+
+            0%,
+            80%,
+            100% {
+                transform: translateY(0);
+            }
+
+            40% {
+                transform: translateY(-6px);
+            }
+        }
+
+        .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.7);
+            display: inline-block;
+            animation: bounce 1.2s infinite ease-in-out;
+        }
+
+        .dot:nth-child(2) {
+            animation-delay: .2s;
+        }
+
+        .dot:nth-child(3) {
+            animation-delay: .4s;
+        }
+
+        /* Markdown */
+        .md-out h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #2D302D;
+            margin: 1rem 0 0.4rem;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .md-out h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #4D6B53;
+            margin: 0.7rem 0 0.3rem;
+        }
+
+        .md-out ul {
+            list-style: disc;
+            padding-left: 1.3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .md-out li {
+            margin-bottom: 0.3rem;
+            font-size: 0.875rem;
+        }
+
+        .md-out strong {
+            font-weight: 700;
+        }
+
+        .md-out p {
+            margin-bottom: 0.4rem;
+            font-size: 0.875rem;
+            line-height: 1.7;
+        }
+
+        .md-out table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .md-out th {
+            background: #F5F1E8;
+            padding: 6px 10px;
+            text-align: left;
+            font-weight: 700;
+        }
+
+        .md-out td {
+            padding: 5px 10px;
+            border-bottom: 1px solid #F5F1E8;
+        }
+    </style>
 </head>
 
 <body>
-  <header>
-    <div>
-      <h1>Smart Diet Plan</h1>
-      <p style="margin:0; opacity:0.7; font-size:0.9rem;">Personalized Nutrition</p>
-    </div>
-    <nav>
-      <a href="index.html">Home</a>
-      <a href="prescription.html">Prescription</a>
-      <a href="healthrisk.html">Risk</a>
-      <a href="diet.html" class="active">Diet</a>
-      <a href="summary.html">Summary</a>
-    </nav>
-  </header>
+    <div class="flex min-h-screen bg-[#F5F1E8]">
 
-  <main>
-    <section class="card">
-      <h2>Generate Diet Plan</h2>
-      <form id="formDiet">
-        <div class="grid">
-          <!-- Report file input removed (using DB history) -->
-          <label>Region
-            <input type="text" name="region" placeholder="South Indian" required />
-          </label>
-          <label>Cuisine Preference
-            <input type="text" name="cuisine" placeholder="Vegetarian, Spicy..." />
-          </label>
-          <label>Condition (Optional)
-            <input type="text" name="condition" placeholder="Leave empty to infer from history" />
-          </label>
-          <label>Allergies / Restrictions
-            <input type="text" name="allergies" placeholder="Peanuts, Gluten..." />
-          </label>
-          <label>Weight (kg)
-            <input type="number" step="0.1" name="weight" placeholder="70" required />
-          </label>
-          <label>Age
-            <input type="number" name="age" placeholder="45" required />
-          </label>
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+      <style>
+        .sidebar {
+          width: 220px;
+          background: linear-gradient(160deg, #F5EFE6 0%, #F0EBE0 100%);
+          border-right: 1px solid #E8E1D5;
+          display: flex;
+          flex-direction: column;
+          padding: 20px 14px;
+          height: 100vh;
+          position: sticky;
+          top: 0;
+          flex-shrink: 0;
+          z-index: 50;
+        }
+        .sidebar-logo {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 24px;
+          padding: 0 4px;
+        }
+        .sidebar-logo-icon {
+          width: 40px; height: 40px;
+          background: linear-gradient(135deg, #88A68B 0%, #4D6B53 100%);
+          border-radius: 14px;
+          display: flex; align-items: center; justify-content: center;
+          color: white; font-size: 20px;
+          box-shadow: 0 4px 12px rgba(77,107,83,0.3);
+          flex-shrink: 0;
+        }
+        .sidebar-logo-text {
+          font-family: 'Outfit', sans-serif;
+          font-size: 18px;
+          font-weight: 700;
+          color: #4D6B53;
+          letter-spacing: -0.3px;
+        }
+        .sidebar-logo-sub {
+          font-size: 9px;
+          color: #8B9E8C;
+          font-family: 'Satoshi', sans-serif;
+          font-weight: 500;
+          text-transform: uppercase;
+          letter-spacing: 0.8px;
+          margin-top: -2px;
+        }
+        .nav-section-label {
+          font-size: 9px;
+          font-weight: 700;
+          color: #B5AEA3;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          padding: 0 8px;
+          margin: 4px 0 6px;
+        }
+        .nav-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 9px 10px;
+          border-radius: 16px;
+          text-decoration: none;
+          color: #6D726D;
+          position: relative;
+          transition: all 0.2s ease;
+          margin-bottom: 3px;
+          font-family: 'Satoshi', sans-serif;
+          font-size: 13px;
+          font-weight: 500;
+        }
+        .nav-active {
+          font-weight: 700;
+        }
+        .nav-icon {
+          width: 30px; height: 30px;
+          border-radius: 10px;
+          display: flex; align-items: center; justify-content: center;
+          color: white;
+          font-size: 14px;
+          flex-shrink: 0;
+          transition: background 0.2s;
+        }
+        .nav-label {
+          flex: 1;
+          transition: color 0.2s;
+        }
+        .nav-dot {
+          width: 6px; height: 6px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+        .sidebar-footer {
+          margin-top: auto;
+          padding: 12px 8px 0;
+          border-top: 1px solid #E8E1D5;
+        }
+        .sidebar-badge {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px;
+          background: linear-gradient(135deg, rgba(136,166,139,0.15) 0%, rgba(77,107,83,0.08) 100%);
+          border-radius: 14px;
+          border: 1px solid rgba(136,166,139,0.2);
+        }
+        .sidebar-badge-icon {
+          width: 28px; height: 28px;
+          background: linear-gradient(135deg, #88A68B 0%, #4D6B53 100%);
+          border-radius: 8px;
+          display: flex; align-items: center; justify-content: center;
+          color: white; font-size: 12px; flex-shrink: 0;
+        }
+        .sidebar-badge-text {
+          font-size: 10px; line-height: 1.4;
+          font-family: 'Satoshi', sans-serif;
+        }
+        .sidebar-badge-text strong {
+          display: block; color: #4D6B53; font-weight: 700; font-size: 10.5px;
+        }
+        .sidebar-badge-text span {
+          color: #8B9E8C;
+        }
+      </style>
+
+      <!-- Logo -->
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">
+          <iconify-icon icon="lucide:heart-pulse"></iconify-icon>
         </div>
-        <button type="submit">Generate</button>
-      </form>
-      <div id="viewDiet" class="view hidden"></div>
-      <pre id="outDiet" class="output"></pre>
-    </section>
-  </main>
+        <div>
+          <div class="sidebar-logo-text">Vitality</div>
+          <div class="sidebar-logo-sub">Health AI</div>
+        </div>
+      </div>
 
-  <footer>
-    <small>Tip: Run your API with <code>uvicorn test.app:app --reload</code></small>
-  </footer>
+      <!-- Navigation -->
+      <div class="nav-section-label">Navigation</div>
+      <nav style="flex:1">
+        <a href="index.html" class="nav-item" data-color="#7C6EBA" data-bg="#EDE9F9"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:layout-dashboard"></iconify-icon>
+          </span>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a href="prescription.html" class="nav-item" data-color="#D47B5A" data-bg="#FBF0EC"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:pill"></iconify-icon>
+          </span>
+          <span class="nav-label">Prescriptions</span>
+        </a>
+        <a href="labreports.html" class="nav-item" data-color="#5B8DB8" data-bg="#EBF3FA"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:microscope"></iconify-icon>
+          </span>
+          <span class="nav-label">Lab Reports</span>
+        </a>
+        <a href="diet.html" class="nav-item nav-active" style="background:#EDF3EE; color:#88A68B">
+          <span class="nav-icon" style="background:#88A68B">
+            <iconify-icon icon="lucide:salad"></iconify-icon>
+          </span>
+          <span class="nav-label">Meal Planner</span>
+          <span class="nav-dot" style="background:#88A68B"></span>
+        </a>
+        <a href="trends.html" class="nav-item" data-color="#E8B86D" data-bg="#FDF5E8"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:trending-up"></iconify-icon>
+          </span>
+          <span class="nav-label">Trends</span>
+        </a>
+        <a href="summary.html" class="nav-item" data-color="#4D9B8A" data-bg="#E8F5F3"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:shield-check"></iconify-icon>
+          </span>
+          <span class="nav-label">Health Summary</span>
+        </a>
+      </nav>
 
-  <script src="app.js?v=6"></script>
+      <!-- Footer badge -->
+      <div class="sidebar-footer">
+        <div class="sidebar-badge">
+          <div class="sidebar-badge-icon">
+            <iconify-icon icon="lucide:sparkles"></iconify-icon>
+          </div>
+          <div class="sidebar-badge-text">
+            <strong>AI Powered</strong>
+            <span>Local LLM · Private</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 flex flex-col p-6 md:p-10 relative overflow-y-auto custom-scrollbar">
+
+            <!-- Header -->
+            <header class="flex items-center justify-between mb-8">
+                <div>
+                    <h1 class="text-3xl font-bold text-[#2D302D] mb-1">Meal Planner</h1>
+                    <p class="text-[#8B7355]">AI-powered nutrition tailored to your health data</p>
+                </div>
+                <a href="labreports.html"
+                    class="flex items-center gap-2 px-5 py-2.5 bg-[#6B9F6F] text-white rounded-2xl font-bold text-sm hover:bg-[#4D7A52] transition-all shadow-md">
+                    <iconify-icon icon="lucide:microscope"></iconify-icon>
+                    Upload Lab Report
+                </a>
+            </header>
+
+            <!-- Top Row: Macro Summary + Hydration -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+
+                <!-- Macro Doughnut + Stats -->
+                <div
+                    class="lg:col-span-8 bg-white rounded-[40px] p-8 card-shadow flex flex-col md:flex-row items-center gap-10 border border-[#E8E1D5]">
+                    <div class="relative w-48 h-48 flex-shrink-0">
+                        <canvas id="topMacroChart"></canvas>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span id="macroCalLabel" class="text-3xl font-bold text-[#2D302D]">—</span>
+                            <span class="text-[10px] uppercase font-bold text-[#8B7355] tracking-widest">kcal</span>
+                        </div>
+                    </div>
+                    <div class="flex-1 w-full space-y-5">
+                        <div>
+                            <h3 class="text-xl font-bold text-[#2D302D] mb-1">Nutrition Summary</h3>
+                            <p class="text-xs text-[#8B7355]">From your generated diet plan</p>
+                        </div>
+                        <div class="grid grid-cols-3 gap-4" id="macroBarSection">
+                            <!-- Filled by JS after plan generation -->
+                            <div class="col-span-3 text-sm text-[#8B7355] italic">Generate a diet plan to see your
+                                macros.</div>
+                        </div>
+                        <div id="macroBadges" class="flex gap-2 flex-wrap hidden"></div>
+                    </div>
+                </div>
+
+                <!-- Hydration Tracker -->
+                <div
+                    class="lg:col-span-4 bg-white rounded-[40px] p-8 card-shadow border border-[#E8E1D5] flex flex-col items-center">
+                    <h3 class="text-lg font-bold text-[#2D302D] mb-4">Hydration Tracker</h3>
+                    <div
+                        class="relative w-24 h-40 border-4 border-[#A8D5E2] rounded-b-[20px] rounded-t-[10px] overflow-hidden bg-slate-50 mb-4">
+                        <div id="waterFill" class="absolute bottom-0 left-0 w-full glass-water" style="height: 0%">
+                        </div>
+                        <div class="absolute inset-0 flex items-center justify-center font-bold text-slate-500 text-sm"
+                            id="waterLabel">0/8</div>
+                    </div>
+                    <div class="flex gap-2 mb-3">
+                        <button id="btnWaterGlass"
+                            class="p-3 bg-[#A8D5E2] text-white rounded-2xl hover:scale-110 transition-transform"
+                            title="+1 glass">
+                            <iconify-icon icon="lucide:droplet" class="text-xl"></iconify-icon>
+                        </button>
+                        <button id="btnWaterReset"
+                            class="px-4 py-2 bg-[#F5F1E8] text-[#8B7355] font-bold rounded-2xl hover:scale-105 transition-transform text-sm">Reset</button>
+                    </div>
+                    <p class="text-xs text-[#8B7355] text-center font-medium italic">Goal: 8 glasses daily</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-8">
+                <!-- Left: Plan Generator + Meal Schedule + Diet Output -->
+                <div class="col-span-12 lg:col-span-8 space-y-8">
+
+                    <!-- Plan Generator Form -->
+                    <section
+                        class="bg-white rounded-[40px] p-8 card-shadow border border-[#E8E1D5] relative overflow-hidden">
+                        <div class="absolute -right-10 -bottom-10 opacity-10">
+                            <iconify-icon icon="ph:leaf-light" class="text-[200px] text-[#6B9F6F]"></iconify-icon>
+                        </div>
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="p-3 bg-[#6B9F6F]/10 rounded-2xl text-[#6B9F6F]">
+                                <iconify-icon icon="lucide:settings-2" class="text-2xl"></iconify-icon>
+                            </div>
+                            <h2 class="text-2xl font-bold text-[#2D302D]">Meal Personalization</h2>
+                        </div>
+
+                        <form id="formDiet" class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="space-y-5">
+                                <div>
+                                    <label
+                                        class="text-sm font-bold text-[#8B7355] uppercase tracking-wider block mb-2">Dietary
+                                        Lifestyle</label>
+                                    <input type="text" name="dietPreferences" id="dietPreferences"
+                                        placeholder="e.g. Vegetarian, Keto, South Indian"
+                                        class="w-full bg-[#F5F1E8] p-3 rounded-2xl border-0 focus:ring-2 focus:ring-[#6B9F6F] outline-none text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-sm font-bold text-[#8B7355] uppercase tracking-wider block mb-2">
+                                        Calorie Target: <span id="calorieLabelDisplay" class="text-[#6B9F6F]">2000
+                                            kcal</span>
+                                    </label>
+                                    <input type="range" name="dietCalories" id="dietCalories" min="1200" max="3500"
+                                        step="100" value="2000" class="w-full input-range">
+                                </div>
+                                <div>
+                                    <label
+                                        class="text-sm font-bold text-[#8B7355] uppercase tracking-wider block mb-2">Health
+                                        Goals</label>
+                                    <input type="text" name="dietGoals" id="dietGoals"
+                                        placeholder="e.g. weight loss, muscle gain, diabetes control"
+                                        class="w-full bg-[#F5F1E8] p-3 rounded-2xl border-0 focus:ring-2 focus:ring-[#6B9F6F] outline-none text-sm">
+                                </div>
+                            </div>
+                            <div class="space-y-5">
+                                <div>
+                                    <label
+                                        class="text-sm font-bold text-[#8B7355] uppercase tracking-wider block mb-2">Health
+                                        Profile</label>
+                                    <input type="number" name="dietAge" id="dietAge" placeholder="Age (years)"
+                                        class="w-full mb-3 bg-[#F5F1E8] p-3 rounded-2xl border-0 focus:ring-2 focus:ring-[#6B9F6F] outline-none text-sm">
+                                    <input type="number" name="dietWeight" id="dietWeight" placeholder="Weight (kg)"
+                                        class="w-full bg-[#F5F1E8] p-3 rounded-2xl border-0 focus:ring-2 focus:ring-[#6B9F6F] outline-none text-sm">
+                                </div>
+                                <div>
+                                    <label
+                                        class="text-sm font-bold text-[#8B7355] uppercase tracking-wider block mb-2">Allergies
+                                        / Avoid</label>
+                                    <input type="text" name="dietAllergies" id="dietAllergies"
+                                        placeholder="e.g. Nuts, Dairy, Gluten"
+                                        class="w-full bg-[#F5F1E8] p-3 rounded-2xl border-0 focus:ring-2 focus:ring-[#6B9F6F] outline-none text-sm">
+                                </div>
+                                <button id="btnGenerateDiet" type="submit"
+                                    class="w-full py-4 bg-[#6B9F6F] text-white font-bold rounded-2xl shadow-lg hover:bg-[#528056] transition-all flex items-center justify-center gap-2">
+                                    <iconify-icon icon="lucide:sparkles"></iconify-icon>
+                                    Generate AI Meal Plan
+                                </button>
+                            </div>
+                        </form>
+                    </section>
+
+                    <!-- Meal Plan Output -->
+                    <section id="dietResultSection" class="hidden">
+                        <!-- Loading -->
+                        <div id="dietLoading"
+                            class="bg-white rounded-[40px] p-10 card-shadow border border-[#E8E1D5] flex flex-col items-center">
+                            <iconify-icon icon="lucide:loader-2"
+                                class="text-4xl text-[#6B9F6F] spin mb-4"></iconify-icon>
+                            <p class="font-bold text-[#4D6B53]">Generating your personalized meal plan…</p>
+                            <p class="text-sm text-[#8B7355] mt-1">AI is analyzing your health data</p>
+                        </div>
+                        <!-- Result filled by JS -->
+                        <div id="dietResultContent" class="hidden"></div>
+                    </section>
+
+                    <!-- Weekly Meal Schedule (populated after plan generation) -->
+                    <section id="weeklyScheduleSection" class="hidden">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="p-3 bg-[#E8956B]/10 rounded-2xl text-[#E8956B]">
+                                <iconify-icon icon="lucide:calendar-days" class="text-2xl"></iconify-icon>
+                            </div>
+                            <h2 class="text-2xl font-bold text-[#2D302D]">Weekly Meal Schedule</h2>
+                        </div>
+                        <div id="weeklyScheduleGrid" class="grid grid-cols-7 gap-3"></div>
+                    </section>
+
+                </div>
+
+                <!-- Right: AI Chat + Analytics -->
+                <div class="col-span-12 lg:col-span-4 space-y-8">
+
+                    <!-- AI Wellbeing Chat (functional) -->
+                    <div class="bg-[#4D6B53] rounded-[40px] shadow-2xl shadow-[#88A68B]/40 overflow-hidden flex flex-col"
+                        style="height: 520px;">
+                        <!-- Header -->
+                        <div class="p-5 flex items-center gap-3 border-b border-white/10 flex-shrink-0">
+                            <div
+                                class="w-11 h-11 bg-white/20 rounded-2xl flex items-center justify-center text-white relative">
+                                <iconify-icon icon="fluent:bot-24-filled" class="text-2xl"></iconify-icon>
+                                <div
+                                    class="absolute bottom-0 right-0 w-3 h-3 bg-green-400 border-2 border-[#4D6B53] rounded-full">
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-white font-bold">Nutrition AI</h3>
+                                <p class="text-white/50 text-xs">Powered by local LLM</p>
+                            </div>
+                        </div>
+                        <!-- Messages -->
+                        <div id="dietChatMessages" class="flex-1 p-4 space-y-3 overflow-y-auto chat-area">
+                            <div class="flex items-start gap-2">
+                                <div
+                                    class="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                                    <iconify-icon icon="fluent:bot-24-filled" class="text-sm text-white"></iconify-icon>
+                                </div>
+                                <div
+                                    class="bg-white/10 text-white p-3.5 text-sm leading-relaxed rounded-[16px_16px_16px_4px] max-w-[88%]">
+                                    👋 Hi! I'm your Nutrition AI. Generate a meal plan above, or ask me any food and
+                                    health questions!
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Suggestions -->
+                        <div class="px-4 py-2 border-t border-white/10 flex-shrink-0">
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    class="diet-suggest text-xs px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-full text-white/80 transition-colors"
+                                    data-q="What foods are good for iron deficiency?">Iron foods</button>
+                                <button
+                                    class="diet-suggest text-xs px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-full text-white/80 transition-colors"
+                                    data-q="Suggest high protein Indian breakfast options">High protein
+                                    breakfast</button>
+                                <button
+                                    class="diet-suggest text-xs px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-full text-white/80 transition-colors"
+                                    data-q="Foods to avoid for diabetes management">Diabetes foods</button>
+                            </div>
+                        </div>
+                        <!-- Input -->
+                        <div class="p-4 bg-[#3A523F] flex-shrink-0">
+                            <div class="flex items-center gap-2 bg-white/10 rounded-2xl px-4 py-2">
+                                <input type="text" id="dietChatInput" placeholder="Ask about nutrition..."
+                                    class="flex-1 bg-transparent border-none outline-none text-sm text-white placeholder-white/40 py-1.5">
+                                <button id="dietChatSend"
+                                    class="w-8 h-8 bg-[#88A68B] hover:bg-[#6B9F6F] rounded-xl flex items-center justify-center text-white transition-colors flex-shrink-0">
+                                    <iconify-icon icon="lucide:send" class="text-sm"></iconify-icon>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Nutrition Analytics (shown after plan generation) -->
+                    <div id="nutritionAnalyticsCard"
+                        class="bg-white rounded-[40px] p-8 card-shadow border border-[#E8E1D5] space-y-6 hidden">
+                        <h3 class="text-xl font-bold text-[#2D302D]">Nutrition Deep Dive</h3>
+
+                        <!-- Macros Breakdown Chart (bar) -->
+                        <div>
+                            <h4 class="text-[10px] font-bold text-[#8B7355] uppercase tracking-[0.2em] mb-3">Macro
+                                Distribution</h4>
+                            <div class="h-[160px]">
+                                <canvas id="macroBarChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Micronutrient targets from plan -->
+                        <div id="microNutrientsSection" class="space-y-3">
+                            <h4 class="text-[10px] font-bold text-[#8B7355] uppercase tracking-[0.2em]">Key Nutrients
+                            </h4>
+                        </div>
+
+                        <!-- Calorie target info -->
+                        <div id="calorieTargetBox" class="p-4 bg-[#6B9F6F]/10 rounded-2xl border border-[#6B9F6F]/20">
+                            <div class="flex items-center gap-2 mb-2">
+                                <iconify-icon icon="lucide:target" class="text-[#6B9F6F]"></iconify-icon>
+                                <span class="font-bold text-sm text-[#4D6B53]">Daily Calorie Target</span>
+                            </div>
+                            <p id="calorieTargetText" class="text-xs text-[#6D726D]"></p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const API_BASE = localStorage.getItem('apiBase') || 'http://127.0.0.1:8000';
+        const md = window.markdownit ? window.markdownit({ breaks: true, linkify: true }) : null;
+        function renderMd(text) { return md ? md.render(text) : text.replace(/\n/g, '<br>'); }
+
+        // ---- Hydration Tracker ----
+        let waterGlasses = 0;
+        const WATER_GOAL = 8;
+
+        function updateWater() {
+            waterGlasses = Math.max(0, Math.min(WATER_GOAL, waterGlasses));
+            const pct = (waterGlasses / WATER_GOAL) * 100;
+            document.getElementById('waterFill').style.height = pct + '%';
+            document.getElementById('waterLabel').textContent = waterGlasses + '/' + WATER_GOAL;
+        }
+
+        document.getElementById('btnWaterGlass').addEventListener('click', () => { waterGlasses++; updateWater(); });
+        document.getElementById('btnWaterReset').addEventListener('click', () => { waterGlasses = 0; updateWater(); });
+
+        // ---- Calorie slider ----
+        const calSlider = document.getElementById('dietCalories');
+        const calDisplay = document.getElementById('calorieLabelDisplay');
+        calSlider.addEventListener('input', () => { calDisplay.textContent = calSlider.value + ' kcal'; });
+
+        // ---- Macro Doughnut (top) ----
+        let topMacroChartInstance = null;
+
+        function renderTopMacroChart(protein, carbs, fats, calories) {
+            const ctx = document.getElementById('topMacroChart').getContext('2d');
+            if (topMacroChartInstance) topMacroChartInstance.destroy();
+            topMacroChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Protein', 'Carbs', 'Fats'],
+                    datasets: [{ data: [protein, carbs, fats], backgroundColor: ['#B85C3C', '#6B9F6F', '#E8956B'], borderWidth: 0, borderRadius: 4 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '72%',
+                    plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.parsed}g ${ctx.label}` } } }
+                }
+            });
+            document.getElementById('macroCalLabel').textContent = calories ? calories.toLocaleString() : '—';
+        }
+
+        // ---- Macro Bar Chart (analytics card) ----
+        let macroBarChartInst = null;
+
+        function renderMacroBarChart(protein, carbs, fats) {
+            const ctx = document.getElementById('macroBarChart').getContext('2d');
+            if (macroBarChartInst) macroBarChartInst.destroy();
+            macroBarChartInst = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Protein', 'Carbohydrates', 'Fats'],
+                    datasets: [{
+                        data: [protein, carbs, fats],
+                        backgroundColor: ['#B85C3C', '#6B9F6F', '#E8956B'],
+                        borderRadius: 8, borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { grid: { display: false } },
+                        y: { beginAtZero: true, grid: { color: '#F5F1E8' }, ticks: { callback: v => v + 'g' } }
+                    }
+                }
+            });
+        }
+
+        // ---- Macro progress bars ----
+        function renderMacrosBars(protein, proteinGoal, carbs, carbsGoal, fats, fatsGoal) {
+            const section = document.getElementById('macroBarSection');
+            const pPct = Math.min(100, Math.round((protein / proteinGoal) * 100));
+            const cPct = Math.min(100, Math.round((carbs / carbsGoal) * 100));
+            const fPct = Math.min(100, Math.round((fats / fatsGoal) * 100));
+            section.innerHTML = `
+        ${macroBar('Protein', protein, proteinGoal, 'g', '#B85C3C', pPct)}
+        ${macroBar('Carbs', carbs, carbsGoal, 'g', '#6B9F6F', cPct)}
+        ${macroBar('Fats', fats, fatsGoal, 'g', '#E8956B', fPct)}`;
+        }
+
+        function macroBar(name, val, goal, unit, color, pct) {
+            return `<div class="space-y-1.5">
+        <div class="flex justify-between text-[11px] font-bold uppercase text-[#8B7355]">
+            <span>${name}</span><span>${val}/${goal}${unit}</span>
+        </div>
+        <div class="h-2 bg-[#F5F1E8] rounded-full overflow-hidden">
+            <div class="h-full rounded-full" style="width:${pct}%; background:${color};"></div>
+        </div>
+    </div>`;
+        }
+
+        // ---- Parse nutrition from LLM response ----
+        function parseNutrition(planText, calorieTarget) {
+            // Attempt to extract macros from the plan text using regex
+            const protein = extractNum(planText, /protein[:\s]+(\d+)\s*g/i) || Math.round(calorieTarget * 0.25 / 4);
+            const carbs = extractNum(planText, /carb[s]?[:\s]+(\d+)\s*g/i) || Math.round(calorieTarget * 0.5 / 4);
+            const fats = extractNum(planText, /fat[s]?[:\s]+(\d+)\s*g/i) || Math.round(calorieTarget * 0.25 / 9);
+            return { protein, carbs, fats };
+        }
+
+        function extractNum(text, regex) {
+            const m = text.match(regex);
+            return m ? parseInt(m[1]) : null;
+        }
+
+        // ---- Generate weekly schedule from plan ----
+        const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const MEALS = ['Breakfast', 'Lunch', 'Dinner', 'Snack'];
+        const MEAL_COLORS = { Breakfast: '#6B9F6F', Lunch: '#E8956B', Dinner: '#B85C3C', Snack: '#A8D5E2' };
+
+        function buildWeeklySchedule(planText) {
+            // Extract meal names from the plan text lines
+            const lines = planText.split('\n').filter(l => l.trim());
+            const mealNames = {};
+            for (const meal of MEALS) {
+                const re = new RegExp(meal + '[:\\s\\-]+([^\\n]+)', 'i');
+                let found = [];
+                for (const line of lines) {
+                    const m = line.match(re);
+                    if (m) { const clean = m[1].replace(/[*_#`]/g, '').trim().split('(')[0].trim(); if (clean.length > 2) found.push(clean); }
+                }
+                mealNames[meal] = found.length > 0 ? found : defaultMeals(meal);
+            }
+            return mealNames;
+        }
+
+        function defaultMeals(meal) {
+            const defaults = {
+                Breakfast: ['Oatmeal', 'Smoothie Bowl', 'Idli Sambar', 'Toast & Eggs', 'Poha', 'Upma', 'Fruit Bowl'],
+                Lunch: ['Dal Rice', 'Quinoa Bowl', 'Grilled Chicken', 'Veggie Wrap', 'Khichdi', 'Brown Rice', 'Sabzi Roti'],
+                Dinner: ['Lentil Soup', 'Stir Fry', 'Soup Salad', 'Grilled Fish', 'Palak Paneer', 'Mixed Veg', 'Clear Soup'],
+                Snack: ['Almonds', 'Fruits', 'Yogurt', 'Chana', 'Nuts', 'Sprouts', 'Roasted Makhana']
+            };
+            return defaults[meal] || [];
+        }
+
+        function renderWeeklySchedule(mealNames) {
+            const grid = document.getElementById('weeklyScheduleGrid');
+            // Header row
+            let html = DAYS.map(d => `<div class="text-center text-[10px] font-bold text-[#8B7355] uppercase tracking-widest">${d}</div>`).join('');
+            // Day cells
+            for (let i = 0; i < 7; i++) {
+                html += `<div class="space-y-3">`;
+                for (const meal of MEALS) {
+                    const names = mealNames[meal] || [];
+                    const name = names[i % names.length] || meal;
+                    const color = MEAL_COLORS[meal];
+                    html += `<div class="bg-white rounded-2xl p-3 border border-[#E8E1D5] meal-card-hover cursor-pointer" title="${meal}: ${name}">
+                <div class="text-[9px] font-bold mb-1" style="color:${color}">${meal.toUpperCase()}</div>
+                <div class="font-bold text-xs text-[#2D302D] leading-tight">${name}</div>
+            </div>`;
+                }
+                html += `</div>`;
+            }
+            grid.innerHTML = html;
+            document.getElementById('weeklyScheduleSection').classList.remove('hidden');
+        }
+
+        // ---- Form Submit ----
+        const formDiet = document.getElementById('formDiet');
+        const dietResultSection = document.getElementById('dietResultSection');
+        const dietLoading = document.getElementById('dietLoading');
+        const dietResultContent = document.getElementById('dietResultContent');
+        const btnGenerateDiet = document.getElementById('btnGenerateDiet');
+
+        formDiet.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const prefs = document.getElementById('dietPreferences').value.trim() || 'balanced';
+            const calories = parseInt(document.getElementById('dietCalories').value);
+            const age = document.getElementById('dietAge').value;
+            const weight = document.getElementById('dietWeight').value;
+            const goals = document.getElementById('dietGoals').value.trim();
+            const allergies = document.getElementById('dietAllergies').value.trim();
+
+            btnGenerateDiet.disabled = true;
+            btnGenerateDiet.innerHTML = '<iconify-icon icon="lucide:loader-2" class="spin"></iconify-icon> Generating…';
+            dietResultSection.classList.remove('hidden');
+            dietLoading.classList.remove('hidden');
+            dietResultContent.classList.add('hidden');
+            document.getElementById('weeklyScheduleSection').classList.add('hidden');
+            setTimeout(() => dietResultSection.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+
+            try {
+                const body = { diet_preferences: prefs, calorie_target: calories };
+                if (age) body.age = parseInt(age);
+                if (weight) body.weight = parseFloat(weight);
+                if (goals) body.health_goals = goals;
+                if (allergies) body.allergies = allergies;
+
+                const res = await fetch(`${API_BASE}/generate-diet-plan`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+                });
+                if (!res.ok) { const err = await res.json(); throw new Error(err.detail || 'Generation failed'); }
+                const data = await res.json();
+                const planText = data.diet_plan || data.plan || data.message || '';
+
+                // Parse macros from plan (or use LLM-returned values)
+                const macros = data.macros || parseNutrition(planText, calories);
+                const protein = data.protein_g || macros.protein;
+                const carbs = data.carbs_g || macros.carbs;
+                const fats = data.fats_g || macros.fats;
+                const proteinGoal = Math.round(calories * 0.25 / 4);
+                const carbsGoal = Math.round(calories * 0.50 / 4);
+                const fatsGoal = Math.round(calories * 0.25 / 9);
+
+                // Render macro doughnut + bars
+                renderTopMacroChart(protein, carbs, fats, calories);
+                renderMacrosBars(protein, proteinGoal, carbs, carbsGoal, fats, fatsGoal);
+                document.getElementById('macroBadges').classList.remove('hidden');
+                document.getElementById('macroBadges').innerHTML = `
+            <span class="px-3 py-1 bg-[#6B9F6F]/10 text-[#6B9F6F] text-[10px] font-bold rounded-full uppercase">${prefs}</span>
+            <span class="px-3 py-1 bg-[#E8B86D]/10 text-[#B87C14] text-[10px] font-bold rounded-full uppercase">${calories} kcal</span>
+            ${goals ? `<span class="px-3 py-1 bg-[#D4A5A5]/10 text-[#B85C3C] text-[10px] font-bold rounded-full uppercase">${goals}</span>` : ''}`;
+
+                // Render result markdown
+                dietLoading.classList.add('hidden');
+                dietResultContent.classList.remove('hidden');
+                dietResultContent.innerHTML = `
+            <div class="bg-white rounded-[40px] p-8 card-shadow border border-[#E8E1D5]">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-3 bg-[#6B9F6F]/10 rounded-2xl text-[#6B9F6F]">
+                        <iconify-icon icon="lucide:sparkles" class="text-2xl"></iconify-icon>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-[#2D302D]">Your AI Meal Plan</h2>
+                        <p class="text-xs text-[#8B7355]">${calories} kcal · ${prefs}</p>
+                    </div>
+                </div>
+                <div class="md-out bg-[#FDFBF7] rounded-2xl p-6 border border-[#E8E1D5] leading-relaxed">${renderMd(planText)}</div>
+            </div>`;
+
+                // Build weekly schedule
+                const mealNames = buildWeeklySchedule(planText);
+                renderWeeklySchedule(mealNames);
+
+                // Render analytics card
+                document.getElementById('nutritionAnalyticsCard').classList.remove('hidden');
+                renderMacroBarChart(protein, carbs, fats);
+
+                // Micronutrients (key ones from plan text)
+                const micros = extractMicronutrients(planText);
+                const microSection = document.getElementById('microNutrientsSection');
+                if (micros.length > 0) {
+                    microSection.innerHTML = '<h4 class="text-[10px] font-bold text-[#8B7355] uppercase tracking-[0.2em]">Key Nutrients</h4>' +
+                        micros.map(m => `
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-[11px] font-bold">
+                            <span>${m.name}</span><span style="color:${m.color}">${m.level}</span>
+                        </div>
+                        <div class="h-2 bg-[#F5F1E8] rounded-full">
+                            <div class="h-full rounded-full" style="width:${m.pct}%; background:${m.color};"></div>
+                        </div>
+                    </div>`).join('');
+                }
+
+                document.getElementById('calorieTargetText').textContent = `Daily target: ${calories} kcal · Protein: ${protein}g · Carbs: ${carbs}g · Fats: ${fats}g`;
+
+            } catch (err) {
+                dietLoading.classList.add('hidden');
+                dietResultContent.classList.remove('hidden');
+                dietResultContent.innerHTML = `
+            <div class="bg-white rounded-[32px] p-8 border border-[#F5EFE6] card-shadow">
+                <div class="text-[#B85C3C] font-bold flex items-center gap-2">
+                    <iconify-icon icon="lucide:alert-circle"></iconify-icon>
+                    Error: ${err.message}
+                </div>
+                <p class="text-sm text-[#8B7355] mt-2">Make sure the backend is running at ${API_BASE}</p>
+            </div>`;
+            } finally {
+                btnGenerateDiet.disabled = false;
+                btnGenerateDiet.innerHTML = '<iconify-icon icon="lucide:sparkles"></iconify-icon> Generate AI Meal Plan';
+            }
+        });
+
+        function extractMicronutrients(text) {
+            const targets = [
+                { name: 'Vitamin D', re: /vitamin\s*d/i, color: '#B85C3C' },
+                { name: 'Iron (Fe)', re: /iron/i, color: '#6B9F6F' },
+                { name: 'Calcium', re: /calcium/i, color: '#A8D5E2' },
+                { name: 'Vitamin B12', re: /b12|vitamin\s*b-?12/i, color: '#E8956B' },
+                { name: 'Magnesium', re: /magnesium/i, color: '#D4A5A5' },
+                { name: 'Fiber', re: /fiber|fibre/i, color: '#6B9F6F' },
+            ];
+            return targets
+                .filter(t => t.re.test(text))
+                .map((t, i) => {
+                    const pct = 60 + (i * 8) % 30; // Relative estimate based on mention in plan
+                    return { ...t, pct, level: pct + '% focus' };
+                });
+        }
+
+        // ---- Nutrition AI Chat ----
+        const dietChatMessages = document.getElementById('dietChatMessages');
+        const dietChatInput = document.getElementById('dietChatInput');
+        const dietChatSend = document.getElementById('dietChatSend');
+
+        function appendDietMsg(role, html, isHtml = false) {
+            const wrap = document.createElement('div');
+            if (role === 'user') {
+                wrap.className = 'flex justify-end';
+                wrap.innerHTML = `<div class="bg-[#E29578] text-white p-3 max-w-[88%] text-sm font-medium rounded-[16px_16px_4px_16px]">${isHtml ? html : html.replace(/</g, '&lt;')}</div>`;
+            } else if (role === 'typing') {
+                wrap.id = 'dietTyping';
+                wrap.className = 'flex items-start gap-2';
+                wrap.innerHTML = `<div class="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1"><iconify-icon icon="fluent:bot-24-filled" class="text-sm text-white"></iconify-icon></div><div class="bg-white/10 px-4 py-3 rounded-[16px_16px_16px_4px] flex items-center gap-1.5"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>`;
+            } else {
+                wrap.className = 'flex items-start gap-2';
+                wrap.innerHTML = `<div class="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center flex-shrink-0 mt-1"><iconify-icon icon="fluent:bot-24-filled" class="text-sm text-white"></iconify-icon></div><div class="bg-white/10 text-white p-3.5 max-w-[88%] text-sm leading-relaxed rounded-[16px_16px_16px_4px]">${isHtml ? html : html.replace(/</g, '&lt;')}</div>`;
+            }
+            dietChatMessages.appendChild(wrap);
+            dietChatMessages.scrollTop = dietChatMessages.scrollHeight;
+            return wrap;
+        }
+
+        async function sendDietChat() {
+            const q = dietChatInput.value.trim();
+            if (!q) return;
+            dietChatInput.value = '';
+            dietChatSend.disabled = true;
+            appendDietMsg('user', q);
+            appendDietMsg('typing', '');
+            try {
+                const res = await fetch(`${API_BASE}/wellbeing-chat`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ question: q })
+                });
+                const data = await res.json();
+                document.getElementById('dietTyping')?.remove();
+                if (!res.ok) throw new Error(data.detail || 'Error');
+                appendDietMsg('assistant', renderMd(data.answer || ''), true);
+            } catch (err) {
+                document.getElementById('dietTyping')?.remove();
+                appendDietMsg('assistant', `⚠️ ${err.message}`);
+            } finally {
+                dietChatSend.disabled = false;
+            }
+        }
+
+        dietChatSend.addEventListener('click', sendDietChat);
+        dietChatInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); sendDietChat(); } });
+        document.querySelectorAll('.diet-suggest').forEach(b => b.addEventListener('click', () => { dietChatInput.value = b.dataset.q; sendDietChat(); }));
+    </script>
 </body>
 
 </html>

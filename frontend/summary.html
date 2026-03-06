@@ -1,73 +1,375 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Health Summary | Medical Intelligence</title>
-    <link rel="stylesheet" href="styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Summary | Vitality</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
+    <link href="https://api.fontshare.com/v2/css?f[]=outfit@300,400,500,600,700&f[]=satoshi@400,500,700&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Satoshi', sans-serif;
+            background-color: #FDFBF7;
+            color: #2D302D;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4 {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #88A68B;
+            border-radius: 10px;
+        }
+
+        /* Markdown rendering */
+        #summaryContent h2 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #2D302D;
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        #summaryContent h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #4D6B53;
+            margin-top: 1rem;
+            margin-bottom: 0.4rem;
+        }
+
+        #summaryContent ul {
+            list-style: disc;
+            padding-left: 1.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        #summaryContent li {
+            margin-bottom: 0.35rem;
+            font-size: 0.9rem;
+            color: #4D4D4D;
+        }
+
+        #summaryContent strong {
+            font-weight: 700;
+            color: #2D302D;
+        }
+
+        #summaryContent p {
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+            line-height: 1.7;
+        }
+    </style>
 </head>
 
 <body>
-    <header>
+    <div class="flex min-h-screen bg-[#FDFBF7] overflow-hidden">
+
+        <!-- Sidebar -->
+        <aside class="sidebar">
+      <style>
+        .sidebar {
+          width: 220px;
+          background: linear-gradient(160deg, #F5EFE6 0%, #F0EBE0 100%);
+          border-right: 1px solid #E8E1D5;
+          display: flex;
+          flex-direction: column;
+          padding: 20px 14px;
+          height: 100vh;
+          position: sticky;
+          top: 0;
+          flex-shrink: 0;
+          z-index: 50;
+        }
+        .sidebar-logo {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 24px;
+          padding: 0 4px;
+        }
+        .sidebar-logo-icon {
+          width: 40px; height: 40px;
+          background: linear-gradient(135deg, #88A68B 0%, #4D6B53 100%);
+          border-radius: 14px;
+          display: flex; align-items: center; justify-content: center;
+          color: white; font-size: 20px;
+          box-shadow: 0 4px 12px rgba(77,107,83,0.3);
+          flex-shrink: 0;
+        }
+        .sidebar-logo-text {
+          font-family: 'Outfit', sans-serif;
+          font-size: 18px;
+          font-weight: 700;
+          color: #4D6B53;
+          letter-spacing: -0.3px;
+        }
+        .sidebar-logo-sub {
+          font-size: 9px;
+          color: #8B9E8C;
+          font-family: 'Satoshi', sans-serif;
+          font-weight: 500;
+          text-transform: uppercase;
+          letter-spacing: 0.8px;
+          margin-top: -2px;
+        }
+        .nav-section-label {
+          font-size: 9px;
+          font-weight: 700;
+          color: #B5AEA3;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          padding: 0 8px;
+          margin: 4px 0 6px;
+        }
+        .nav-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 9px 10px;
+          border-radius: 16px;
+          text-decoration: none;
+          color: #6D726D;
+          position: relative;
+          transition: all 0.2s ease;
+          margin-bottom: 3px;
+          font-family: 'Satoshi', sans-serif;
+          font-size: 13px;
+          font-weight: 500;
+        }
+        .nav-active {
+          font-weight: 700;
+        }
+        .nav-icon {
+          width: 30px; height: 30px;
+          border-radius: 10px;
+          display: flex; align-items: center; justify-content: center;
+          color: white;
+          font-size: 14px;
+          flex-shrink: 0;
+          transition: background 0.2s;
+        }
+        .nav-label {
+          flex: 1;
+          transition: color 0.2s;
+        }
+        .nav-dot {
+          width: 6px; height: 6px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
+        .sidebar-footer {
+          margin-top: auto;
+          padding: 12px 8px 0;
+          border-top: 1px solid #E8E1D5;
+        }
+        .sidebar-badge {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px;
+          background: linear-gradient(135deg, rgba(136,166,139,0.15) 0%, rgba(77,107,83,0.08) 100%);
+          border-radius: 14px;
+          border: 1px solid rgba(136,166,139,0.2);
+        }
+        .sidebar-badge-icon {
+          width: 28px; height: 28px;
+          background: linear-gradient(135deg, #88A68B 0%, #4D6B53 100%);
+          border-radius: 8px;
+          display: flex; align-items: center; justify-content: center;
+          color: white; font-size: 12px; flex-shrink: 0;
+        }
+        .sidebar-badge-text {
+          font-size: 10px; line-height: 1.4;
+          font-family: 'Satoshi', sans-serif;
+        }
+        .sidebar-badge-text strong {
+          display: block; color: #4D6B53; font-weight: 700; font-size: 10.5px;
+        }
+        .sidebar-badge-text span {
+          color: #8B9E8C;
+        }
+      </style>
+
+      <!-- Logo -->
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">
+          <iconify-icon icon="lucide:heart-pulse"></iconify-icon>
+        </div>
         <div>
-            <h1>Health Summary</h1>
-            <p style="margin:0; opacity:0.7; font-size:0.9rem;">AI-Driven Analysis</p>
+          <div class="sidebar-logo-text">Vitality</div>
+          <div class="sidebar-logo-sub">Health AI</div>
         </div>
-        <nav>
-            <a href="index.html">Home</a>
-            <a href="prescription.html">Prescription</a>
-            <a href="healthrisk.html">Risk</a>
-            <a href="diet.html">Diet</a>
-            <a href="summary.html" class="active">Summary</a>
-        </nav>
-        <div class="nav-config" style="display:none;"> <!-- Hidden for cleaner UI, still functional via JS logic -->
-            <input id="apiBase" type="text" value="http://127.0.0.1:8000" />
-            <button id="saveBase">Save</button>
+      </div>
+
+      <!-- Navigation -->
+      <div class="nav-section-label">Navigation</div>
+      <nav style="flex:1">
+        <a href="index.html" class="nav-item" data-color="#7C6EBA" data-bg="#EDE9F9"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:layout-dashboard"></iconify-icon>
+          </span>
+          <span class="nav-label">Dashboard</span>
+        </a>
+        <a href="prescription.html" class="nav-item" data-color="#D47B5A" data-bg="#FBF0EC"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:pill"></iconify-icon>
+          </span>
+          <span class="nav-label">Prescriptions</span>
+        </a>
+        <a href="labreports.html" class="nav-item" data-color="#5B8DB8" data-bg="#EBF3FA"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:microscope"></iconify-icon>
+          </span>
+          <span class="nav-label">Lab Reports</span>
+        </a>
+        <a href="diet.html" class="nav-item" data-color="#88A68B" data-bg="#EDF3EE"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:salad"></iconify-icon>
+          </span>
+          <span class="nav-label">Meal Planner</span>
+        </a>
+        <a href="trends.html" class="nav-item" data-color="#E8B86D" data-bg="#FDF5E8"
+          onmouseover="this.style.background=this.dataset.bg;this.querySelector('.nav-icon').style.background=this.dataset.color;this.querySelector('.nav-label').style.color=this.dataset.color"
+          onmouseout="this.style.background='';this.querySelector('.nav-icon').style.background='#E8E1D5';this.querySelector('.nav-label').style.color=''">
+          <span class="nav-icon" style="background:#E8E1D5">
+            <iconify-icon icon="lucide:trending-up"></iconify-icon>
+          </span>
+          <span class="nav-label">Trends</span>
+        </a>
+        <a href="summary.html" class="nav-item nav-active" style="background:#E8F5F3; color:#4D9B8A">
+          <span class="nav-icon" style="background:#4D9B8A">
+            <iconify-icon icon="lucide:shield-check"></iconify-icon>
+          </span>
+          <span class="nav-label">Health Summary</span>
+          <span class="nav-dot" style="background:#4D9B8A"></span>
+        </a>
+      </nav>
+
+      <!-- Footer badge -->
+      <div class="sidebar-footer">
+        <div class="sidebar-badge">
+          <div class="sidebar-badge-icon">
+            <iconify-icon icon="lucide:sparkles"></iconify-icon>
+          </div>
+          <div class="sidebar-badge-text">
+            <strong>AI Powered</strong>
+            <span>Local LLM · Private</span>
+          </div>
         </div>
-    </header>
+      </div>
+    </aside>
 
-    <main>
-        <section class="card">
-            <h2>Health Trends Overview</h2>
-            <div class="chart-container" style="position: relative; height:300px; width:100%">
-                <canvas id="summaryChart"></canvas>
-            </div>
-        </section>
-
-        <section class="card">
-            <h2>History Data</h2>
-            <div class="cols">
-                <div class="panel">
-                    <h3>Recent Lab Reports</h3>
-                    <div id="historyReports" class="history-list">Loading...</div>
+        <!-- Main Content -->
+        <main class="flex-1 p-8 overflow-y-auto custom-scrollbar">
+            <div class="max-w-5xl mx-auto">
+                <!-- Header -->
+                <div class="mb-8">
+                    <h1 class="text-3xl font-bold text-[#2D302D] mb-1">Health Summary</h1>
+                    <p class="text-[#6D726D]">AI-powered analysis based on your medical history</p>
                 </div>
-                <div class="panel">
-                    <h3>Recent Prescriptions</h3>
-                    <div id="historyPrescriptions" class="history-list">Loading...</div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <!-- Lab Reports History -->
+                    <div class="bg-white rounded-[28px] p-6 shadow-md border border-[#F5EFE6]">
+                        <h2 class="text-lg font-bold text-[#2D302D] mb-4 flex items-center gap-2">
+                            <iconify-icon icon="lucide:microscope" class="text-[#88A68B]"></iconify-icon>
+                            Recent Lab Reports
+                        </h2>
+                        <div id="historyReports" class="text-sm text-[#6D726D]">
+                            <div class="flex items-center gap-2">
+                                <iconify-icon icon="lucide:loader-2" class="animate-spin text-[#88A68B]"></iconify-icon>
+                                Loading...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Prescriptions History -->
+                    <div class="bg-white rounded-[28px] p-6 shadow-md border border-[#F5EFE6]">
+                        <h2 class="text-lg font-bold text-[#2D302D] mb-4 flex items-center gap-2">
+                            <iconify-icon icon="lucide:pill" class="text-[#D47B5A]"></iconify-icon>
+                            Recent Prescriptions
+                        </h2>
+                        <div id="historyPrescriptions" class="text-sm text-[#6D726D]">
+                            <div class="flex items-center gap-2">
+                                <iconify-icon icon="lucide:loader-2" class="animate-spin text-[#D47B5A]"></iconify-icon>
+                                Loading...
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </section>
 
-        <section class="card">
-            <h2>Current Health Condition</h2>
-            <p>Based on your recent lab reports and prescriptions.</p>
-            <button id="btnLoadSummary">Generate Summary</button>
-            <div id="viewSummary" class="view hidden">
-                <div id="summaryContent" class="markdown-body"></div>
-            </div>
-        </section>
-    </main>
+                <!-- Trends Chart -->
+                <div class="bg-white rounded-[28px] p-6 shadow-md border border-[#F5EFE6] mb-6" id="summaryGraphs"
+                    style="display:none;">
+                    <h2 class="text-lg font-bold text-[#2D302D] mb-4 flex items-center gap-2">
+                        <iconify-icon icon="lucide:trending-up" class="text-[#88A68B]"></iconify-icon>
+                        Health Risk Trends
+                    </h2>
+                    <div class="h-[280px]">
+                        <canvas id="summaryChart"></canvas>
+                    </div>
+                </div>
 
-    <footer>
-        <small>Tip: Run your API with <code>uvicorn test.app:app --reload</code></small>
-    </footer>
+                <!-- AI Summary -->
+                <div class="bg-white rounded-[28px] p-6 shadow-md border border-[#F5EFE6]">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-lg font-bold text-[#2D302D] flex items-center gap-2">
+                            <iconify-icon icon="fluent:bot-24-filled" class="text-[#4D6B53]"></iconify-icon>
+                            AI Health Analysis
+                        </h2>
+                        <button id="btnLoadSummary"
+                            class="flex items-center gap-2 px-5 py-2.5 bg-[#4D6B53] text-white rounded-2xl font-bold text-sm hover:bg-[#88A68B] transition-all shadow-md">
+                            <iconify-icon icon="lucide:sparkles"></iconify-icon>
+                            Generate Summary
+                        </button>
+                    </div>
+                    <p class="text-sm text-[#6D726D] mb-4">
+                        Click "Generate Summary" to get an AI analysis of your current health condition based on your
+                        lab reports and prescriptions.
+                    </p>
+                    <div id="viewSummary" class="hidden">
+                        <div id="summaryContent"
+                            class="bg-[#FDFBF7] rounded-2xl p-6 border border-[#F5EFE6] leading-relaxed"></div>
+                    </div>
+                </div>
+
+                <!-- Hidden apiBase input for app.js compatibility -->
+                <input id="apiBase" type="hidden" value="http://127.0.0.1:8000">
+            </div>
+        </main>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script
         src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/markdown-it@14.1.0/dist/markdown-it.min.js"></script>
-    <script src="app.js?v=15"></script>
+    <script src="app.js"></script>
 </body>
 
 </html>
