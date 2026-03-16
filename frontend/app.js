@@ -16,13 +16,121 @@
 
   let currentHealthRiskData = null; // Store last analysis for saving
 
-
   if (saveBaseBtn && apiBaseInput) {
     saveBaseBtn.addEventListener('click', () => {
       setBase(apiBaseInput.value.trim());
       alert('Saved API base URL');
     });
   }
+
+  // ─── GLOBAL TOAST ─────────────────────────────────────────────────────────
+  // A persistent floating bar that survives page navigation by checking
+  // localStorage for active jobs on every page load.
+  function getOrCreateToast() {
+    let t = document.getElementById('_analysisToast');
+    if (!t) {
+      t = document.createElement('div');
+      t.id = '_analysisToast';
+      t.style.cssText = [
+        'position:fixed', 'bottom:24px', 'right:24px', 'z-index:9999',
+        'background:#2D302D', 'color:#fff', 'padding:14px 20px',
+        'border-radius:16px', 'font-size:13px', 'font-weight:600',
+        'box-shadow:0 8px 24px rgba(0,0,0,0.25)', 'display:none',
+        'max-width:320px', 'line-height:1.5', 'cursor:pointer'
+      ].join(';');
+      document.body.appendChild(t);
+    }
+    return t;
+  }
+
+  function showToast(msg, type = 'info') {
+    const t = getOrCreateToast();
+    const colors = { info: '#6B9F6F', done: '#4D6B53', error: '#B85C3C', processing: '#D47B5A' };
+    const icons = { info: '⏳', done: '✅', error: '❌', processing: '🔄' };
+    t.style.borderLeft = `4px solid ${colors[type] || colors.info}`;
+    t.innerHTML = `${icons[type] || '⏳'} ${msg}`;
+    t.style.display = 'block';
+  }
+
+  function hideToast() {
+    const t = document.getElementById('_analysisToast');
+    if (t) t.style.display = 'none';
+  }
+
+  // ─── JOB POLLING ──────────────────────────────────────────────────────────
+  // Jobs are stored in localStorage as:
+  //   mediware_jobs: [ {job_id, type, ts} ]
+  // so they survive page navigation.
+
+  function saveJob(jobId, type) {
+    const jobs = JSON.parse(localStorage.getItem('mediware_jobs') || '[]');
+    jobs.push({ job_id: jobId, type, ts: Date.now() });
+    localStorage.setItem('mediware_jobs', JSON.stringify(jobs));
+  }
+
+  function removeJob(jobId) {
+    const jobs = JSON.parse(localStorage.getItem('mediware_jobs') || '[]');
+    localStorage.setItem('mediware_jobs', JSON.stringify(jobs.filter(j => j.job_id !== jobId)));
+  }
+
+  function getActiveJobs() {
+    return JSON.parse(localStorage.getItem('mediware_jobs') || '[]')
+      .filter(j => Date.now() - j.ts < 30 * 60 * 1000); // Discard jobs older than 30 min
+  }
+
+  async function pollJob(jobId, type, onDone, onError) {
+    const base = getBase();
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`${base}/jobs/${jobId}`);
+        const data = await res.json();
+        if (data.status === 'done') {
+          clearInterval(interval);
+          removeJob(jobId);
+          hideToast();
+          onDone(data.result);
+        } else if (data.status === 'failed') {
+          clearInterval(interval);
+          removeJob(jobId);
+          showToast(`Analysis failed: ${data.error || 'Unknown error'}`, 'error');
+          setTimeout(hideToast, 6000);
+          if (onError) onError(data.error);
+        } else {
+          // Still processing
+          const elapsed = Math.round((Date.now() - (parseInt(jobId.split('-')[0], 16) || Date.now())) / 1000);
+          showToast(`Analyzing ${type}… this may take 30–60s. You can browse other pages.`, 'processing');
+        }
+      } catch (e) {
+        // Network error — keep polling
+        showToast(`Waiting for ${type} analysis…`, 'processing');
+      }
+    }, 3000);
+  }
+
+  // Resume any in-progress jobs from a previous page (localStorage persistence)
+  function resumeActiveJobs() {
+    const active = getActiveJobs();
+    if (active.length === 0) return;
+    showToast(`${active.length} analysis job(s) running in background…`, 'processing');
+    for (const job of active) {
+      pollJob(
+        job.job_id,
+        job.type,
+        (result) => {
+          // When done: if we're on the right page, render; otherwise just notify
+          showToast(`✅ ${job.type} analysis complete! Go to the ${job.type} page to view results.`, 'done');
+          // Store result in sessionStorage for the target page to pick up
+          sessionStorage.setItem(`result_${job.type}_${job.job_id}`, JSON.stringify(result));
+          setTimeout(hideToast, 8000);
+        },
+        null
+      );
+    }
+  }
+
+  resumeActiveJobs();
+  // ─── END JOB POLLING ──────────────────────────────────────────────────────
+
 
   async function postFormData(url, formData) {
     const res = await fetch(url, { method: 'POST', body: formData });
@@ -225,7 +333,6 @@
   const outPrescription = $('#outPrescription');
   const viewPrescription = $('#viewPrescription');
   if (formPrescription && outPrescription && viewPrescription) {
-    // New UI uses a button to trigger a hidden file input, which then auto-submits
     const btnUploadPrescription = $('#btnUploadPrescription');
     const prescriptionFileInput = $('#prescriptionFileInput');
 
@@ -234,24 +341,41 @@
         e.preventDefault();
         prescriptionFileInput.click();
       });
-
       prescriptionFileInput.addEventListener('change', () => {
-        if (prescriptionFileInput.files.length > 0) {
-          formPrescription.requestSubmit();
-        }
+        if (prescriptionFileInput.files.length > 0) formPrescription.requestSubmit();
       });
     }
 
     formPrescription.addEventListener('submit', async (e) => {
       e.preventDefault();
-      outPrescription.textContent = 'Uploading...';
+      outPrescription.textContent = '⏳ Uploading — analysis running in background…';
       unhide(outPrescription);
       const fd = new FormData(formPrescription);
       try {
         const base = getBase();
-        const data = await postFormData(`${base}/prescription`, fd);
-        showJSON(outPrescription, data);
-        renderPrescription(viewPrescription, data);
+        // Non-blocking: get job_id immediately
+        const res = await fetch(`${base}/prescription`, { method: 'POST', body: fd });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const { job_id } = await res.json();
+
+        outPrescription.textContent = '🔄 Analysis running in background — you can navigate to other pages.';
+        showToast('Prescription analysis started. You can browse other pages.', 'processing');
+        saveJob(job_id, 'prescription');
+
+        pollJob(
+          job_id,
+          'prescription',
+          (result) => {
+            outPrescription.textContent = '';
+            renderPrescription(viewPrescription, result);
+            showToast('✅ Prescription analysis complete!', 'done');
+            setTimeout(hideToast, 5000);
+          },
+          (err) => {
+            outPrescription.textContent = `Error: ${err}`;
+            hide(viewPrescription);
+          }
+        );
       } catch (err) {
         outPrescription.textContent = `Error: ${err.message}`;
         hide(viewPrescription);
@@ -259,13 +383,13 @@
     });
   }
 
+
   // 2) Health Risk
   const formHealthRisk = $('#formHealthRisk');
   const outHealthRisk = $('#outHealthRisk');
   const viewHealthRisk = $('#viewHealthRisk');
   let riskChartInstance = null;
   if (formHealthRisk && outHealthRisk && viewHealthRisk) {
-    // New UI uses a button to trigger a hidden file input, which then auto-submits
     const btnUploadHealthRisk = $('#btnUploadHealthRisk');
     const healthRiskFileInput = $('#healthRiskFileInput');
 
@@ -274,65 +398,70 @@
         e.preventDefault();
         healthRiskFileInput.click();
       });
-
       healthRiskFileInput.addEventListener('change', () => {
-        if (healthRiskFileInput.files.length > 0) {
-          formHealthRisk.requestSubmit();
-        }
+        if (healthRiskFileInput.files.length > 0) formHealthRisk.requestSubmit();
       });
     }
 
     formHealthRisk.addEventListener('submit', async (e) => {
       e.preventDefault();
-      outHealthRisk.textContent = 'Uploading...';
+      outHealthRisk.textContent = '⏳ Uploading — analysis running in background…';
       unhide(outHealthRisk);
       const fd = new FormData(formHealthRisk);
       try {
         const base = getBase();
-        const data = await postFormData(`${base}/healthrisk`, fd);
-        showJSON(outHealthRisk, data);
-        currentHealthRiskData = data; // Store for saving
-        renderHealthRisk(viewHealthRisk, data);
+        // Non-blocking: get job_id immediately
+        const res = await fetch(`${base}/healthrisk`, { method: 'POST', body: fd });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const { job_id } = await res.json();
 
-        // Show save button
-        const btnSave = $('#btnSaveReport');
-        if (btnSave) unhide(btnSave);
+        outHealthRisk.textContent = '🔄 Analysis running in background — you can navigate to other pages.';
+        showToast('Lab report analysis started. You can browse other pages.', 'processing');
+        saveJob(job_id, 'labreport');
 
-        // Dashboard chart: risk_percent per test
-        const tests = Array.isArray(data.tests) ? data.tests : [];
-        const labels = tests.map(t => t.name || '-');
-        const values = tests.map(t => Number.isFinite(t.risk_percent) ? t.risk_percent : 0);
-        const ctx = document.getElementById('expandedTrendsChart');
-        if (ctx && 'Chart' in window) {
-          if (riskChartInstance) {
-            riskChartInstance.destroy();
-          }
-          riskChartInstance = new Chart(ctx, {
-            type: 'bar',
-            data: {
-              labels,
-              datasets: [{
-                label: 'Risk %',
-                data: values,
-                backgroundColor: values.map(v => v >= 70 ? 'rgba(212,123,90,0.8)' : v >= 40 ? 'rgba(232,184,109,0.8)' : 'rgba(107,159,111,0.8)'),
-                borderColor: 'rgba(255,255,255,0.2)',
-                borderRadius: 8,
-                borderWidth: 1
-              }]
-            },
-            options: {
-              responsive: true,
-              plugins: {
-                legend: { display: false },
-                tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.y}%` } }
-              },
-              scales: {
-                y: { beginAtZero: true, max: 100, grid: { color: 'rgba(0,0,0,0.04)' } },
-                x: { grid: { color: 'rgba(0,0,0,0.01)' } }
-              }
+        pollJob(
+          job_id,
+          'labreport',
+          (data) => {
+            outHealthRisk.textContent = '';
+            currentHealthRiskData = data;
+            renderHealthRisk(viewHealthRisk, data);
+            showToast('✅ Lab report analysis complete!', 'done');
+            setTimeout(hideToast, 5000);
+
+            const btnSave = $('#btnSaveReport');
+            if (btnSave) unhide(btnSave);
+
+            // Render bar chart
+            const tests = Array.isArray(data.tests) ? data.tests : [];
+            const labels = tests.map(t => t.name || '-');
+            const values = tests.map(t => Number.isFinite(t.risk_percent) ? t.risk_percent : 0);
+            const ctx = document.getElementById('expandedTrendsChart');
+            if (ctx && 'Chart' in window) {
+              if (riskChartInstance) riskChartInstance.destroy();
+              riskChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                  labels,
+                  datasets: [{
+                    label: 'Risk %', data: values,
+                    backgroundColor: values.map(v => v >= 70 ? 'rgba(212,123,90,0.8)' : v >= 40 ? 'rgba(232,184,109,0.8)' : 'rgba(107,159,111,0.8)'),
+                    borderRadius: 8, borderWidth: 1
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => `${ctx.parsed.y}%` } } },
+                  scales: { y: { beginAtZero: true, max: 100 }, x: {} }
+                }
+              });
             }
-          });
-        }
+          },
+          (err) => {
+            outHealthRisk.textContent = `Error: ${err}`;
+            hide(viewHealthRisk);
+          }
+        );
       } catch (err) {
         outHealthRisk.textContent = `Error: ${err.message}`;
         hide(viewHealthRisk);
@@ -340,6 +469,7 @@
       }
     });
   }
+
 
   // 2b) Save Report Handler
   const btnSaveReport = $('#btnSaveReport');
@@ -758,15 +888,32 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.detail || 'Failed to generate summary');
 
+        const rawAns = data.analysis || '';
+        const graphMatches = [...rawAns.matchAll(/\[GRAPH:\s*(.*?)\]/g)];
+        
+        // Remove the graph tags, their surrounding backticks, and bullet points
+        let cleanAns = rawAns.replace(/[-*]?\s*`?\[GRAPH:\s*.*?\]`?/g, '').trim();
+        // Remove enclosing markdown code blocks if the LLM still generates them
+        cleanAns = cleanAns.replace(/```[a-zA-Z]*\n/gi, '').replace(/```/g, '').replace(/## Graphs/gi, '').trim();
+
         // Render MD
         const md = window.markdownit ? window.markdownit() : null;
         if (md) {
-          summaryContent.innerHTML = md.render(data.analysis || 'No analysis returned.');
+          summaryContent.innerHTML = md.render(cleanAns || 'No analysis returned.');
         } else {
-          summaryContent.textContent = data.analysis;
+          summaryContent.textContent = cleanAns;
           summaryContent.style.whiteSpace = 'pre-wrap';
         }
         unhide(viewSummary);
+
+        // Render all found graphs
+        if (graphMatches.length > 0) {
+          for (const match of graphMatches) {
+            if (match[1]) {
+              await renderSummaryGraph(match[1].trim(), getBase());
+            }
+          }
+        }
       } catch (err) {
         summaryContent.innerHTML = `<p class="error" style="color:red">Error: ${err.message}</p>`;
         unhide(viewSummary);
@@ -776,6 +923,65 @@
       }
     });
   }
+
+  async function renderSummaryGraph(metricName, base) {
+    const chartId = 'summaryGraph_' + Date.now() + Math.floor(Math.random() * 100);
+    const container = document.createElement('div');
+    container.className = 'summary-graph-container my-6 p-4 bg-white rounded-2xl border border-[#F5EFE6] shadow-sm h-[250px]';
+    container.innerHTML = `<canvas id="${chartId}"></canvas>`;
+
+    // Append to summary content
+    summaryContent.appendChild(container);
+
+    try {
+      const res = await fetch(`${base}/trends/${encodeURIComponent(metricName)}`);
+      if (!res.ok) throw new Error("Data fetch failed");
+      const data = await res.json();
+
+      if (!Array.isArray(data) || data.length < 2) {
+        container.innerHTML = `<small class="text-[#8B7355] italic flex items-center h-full justify-center">Not enough historical data to map a trend for ${metricName}</small>`;
+        return;
+      }
+
+      const points = data.map((d, index) => {
+          // Add a tiny bit of ms offset to identical timestamps to prevent chart.js overlapping failure
+          return {
+             x: new Date(new Date(d.timestamp).getTime() + index).toISOString(),
+             y: d.value
+          }
+      }).sort((a,b) => new Date(a.x) - new Date(b.x));
+
+      const ctx = document.getElementById(chartId);
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: [{
+            label: metricName + ' Trend',
+            data: points,
+            borderColor: '#4D6B53',
+            backgroundColor: 'rgba(77, 107, 83, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 4,
+            pointBackgroundColor: '#4D6B53'
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false }, title: { display: true, text: metricName + ' History', font: {family: 'Outfit', size: 16} } },
+          scales: {
+            x: { type: 'time', time: { tooltipFormat: 'MMM d, yyyy', displayFormats: { day: 'MMM d', hour: 'h a' } }, grid: { display: false }, ticks: { source: 'data', autoSkip: true, font: {family: 'Satoshi'} } },
+            y: { beginAtZero: false, ticks: {font: {family: 'Satoshi'}} }
+          }
+        }
+      });
+    } catch (e) {
+      console.error(e);
+      container.remove();
+    }
+  }
+
   async function renderChatGraph(metricName, base) {
     const chartId = 'chatChart_' + Date.now();
     const container = document.createElement('div');

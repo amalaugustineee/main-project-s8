@@ -1,4 +1,3 @@
-import os
 import sys
 import json
 import logging
@@ -7,12 +6,9 @@ import requests
 from requests.exceptions import RequestException
 from pdf2image import convert_from_path
 from PIL import Image
-import pytesseract
-import shutil
-import re
 
-# Local LLM (replaces Google Gemini)
-from llm_local import llm_generate
+# Vision LLM — replaces Tesseract entirely
+from llm_local import vision_analyze, llm_generate
 
 # Configure logging
 logging.basicConfig(
@@ -27,86 +23,50 @@ NCBI_ESummary = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
 # Optional PubMed API key for higher rate limits
 NCBI_API_KEY = ""
 
-# ---------- OCR ----------
-def ocr_file(path):
-    ext = os.path.splitext(path)[1].lower()
+# ---------- VISION PROMPT ----------
+LAB_REPORT_PROMPT = """You are an expert medical lab report reader with the ability to read printed, scanned, photographed, and digitally-generated lab reports.
 
-    # Ensure Tesseract is available. Allow override via TESSERACT_CMD env var.
-    tcmd_env = os.getenv("TESSERACT_CMD")
-    if tcmd_env:
-        pytesseract.pytesseract.tesseract_cmd = tcmd_env
+Look carefully at this image. It may be:
+- A photo of a printed lab report
+- A scanned PDF page
+- A digital/computer-generated lab report image
+- A screenshot of a lab report
 
-    tcmd = getattr(pytesseract.pytesseract, 'tesseract_cmd', None)
-    if not tcmd or not shutil.which(os.path.basename(tcmd)):
-        found = shutil.which('tesseract')
-        if found:
-            pytesseract.pytesseract.tesseract_cmd = found
-        else:
-            raise EnvironmentError(
-                "Tesseract executable not found.\n"
-                "Install Tesseract OCR and ensure it's on PATH, "
-                "or set TESSERACT_CMD to the full path."
-            )
-    if ext == ".pdf":
-        pages = convert_from_path(path, dpi=300)
-        text = ""
-        for page in pages:
-            text += pytesseract.image_to_string(page) + "\n"
-        return text
-    else:
-        img = Image.open(path)
-        return pytesseract.image_to_string(img)
+Your task — extract ALL visible medical test values:
+1. Scan the ENTIRE image for any test name paired with a numeric result.
+   Common section headers: CBC, Lipid Panel, Metabolic Panel, Thyroid, Renal, Liver, Urine.
+2. For each test row you can see:
+   - Test name (e.g. "Glucose", "HbA1c", "LDL Cholesterol")
+   - Result value with unit (e.g. "115 mg/dL", "6.8 %")
+   - Reference/normal range if visible — otherwise use standard medical ranges
+   - How far the result deviates from normal (risk_percent 0-100)
+3. If values are HIGHLIGHTED, FLAGGED, marked H/L/HIGH/LOW/ABNORMAL — assign risk_percent ≥ 50
+4. Normal/within-range values → risk_percent 0-20
+5. The summary should be a single sentence describing the overall health picture
 
-# ---------- LOCAL LLM ANALYSIS ----------
-def analyze_with_llm(ocr_text):
-    """
-    Sends OCR text to local LLM and returns structured JSON analysis of lab report values and risks.
-    """
-    prompt = f"""
-    You are a medical data analysis model. The following text is an OCR extraction from a patient's lab report.
-    
-    Your task:
-    1. Identify each test and its current value with units.
-    2. Compare each value with the safe/normal range.
-    3. Assign a health risk percentage (0-100%) based on how far it deviates from normal.
-    4. Give a short reason (using the test value).
-    5. Output in **strict JSON** with the following structure:
-    
-    {{
-      "summary": "overall health risk summary sentence",
-      "tests": [
-        {{
-          "name": "LDL Cholesterol",
-          "current_value": "165 mg/dL",
-          "safe_range": "<100 mg/dL",
-          "risk_percent": 75,
-          "risk_reason": "LDL above 130 mg/dL increases CVD risk"
-        }},
-        ...
-      ]
-    }}
-    
-    Return **only JSON**, no extra text.
-    
-    Lab report text:
-    \"\"\"{ocr_text}\"\"\"
-    """
+Return ONLY a JSON object — no markdown, no extra text:
+{
+  "summary": "One sentence overall health summary based on the values seen",
+  "tests": [
+    {
+      "name": "Glucose (Fasting)",
+      "current_value": "115 mg/dL",
+      "safe_range": "70-99 mg/dL",
+      "risk_percent": 45,
+      "risk_reason": "Fasting glucose of 115 mg/dL is above normal (70-99) — pre-diabetic range"
+    }
+  ]
+}
 
-    try:
-        parsed = llm_generate(prompt, json_mode=True)
-        return parsed
-    except json.JSONDecodeError as e:
-        logging.error(f"Failed to parse JSON response from LLM: {e}")
-        raise
-    except Exception as e:
-        logging.error(f"Local LLM analysis failed: {e}")
-        raise
+If you genuinely cannot find ANY numeric medical values in the image, return:
+{"summary": "No lab values detected", "tests": []}
+"""
+
+
 
 # ---------- PUBMED ----------
 def fetch_pubmed_articles(test_name, retmax=2):
-    """
-    Returns short summaries and links from PubMed for the given test.
-    """
+    """Returns short summaries and links from PubMed for the given test."""
     params = {
         "db": "pubmed",
         "term": f"{test_name} health risk meta-analysis",
@@ -139,39 +99,51 @@ def fetch_pubmed_articles(test_name, retmax=2):
         logging.warning(f"PubMed fetch failed: {e}")
         return []
 
+
 # ---------- MAIN ----------
 def analyze_labreport(path):
     """
-    Main function to analyze a lab report file.
+    Vision pipeline: Image → Vision Model → structured JSON
+    Tesseract is not used. The vision model reads the table directly.
+    Supports: PDF, PNG, JPG, JPEG, TIFF.
     """
     path = Path(path)
     if not path.exists():
         raise FileNotFoundError(f"Lab report file not found: {path}")
-        
+
     if path.suffix.lower() not in ['.pdf', '.png', '.jpg', '.jpeg', '.tif', '.tiff']:
         raise ValueError(f"Unsupported file type: {path.suffix}. Use PDF or common image formats.")
-    
-    logging.info(f"🔍 OCR processing {path} ...")
+
+    logging.info(f"🔍 Analyzing lab report with vision model: {path}")
+
+    # Load image(s)
+    if path.suffix.lower() == ".pdf":
+        pages = convert_from_path(str(path), dpi=200)
+        # For multi-page lab reports, combine all pages
+        # For now, use first page (most lab reports are single-page)
+        img = pages[0]
+        if len(pages) > 1:
+            logging.info(f"📄 PDF has {len(pages)} pages — analyzing page 1")
+    else:
+        img = Image.open(str(path))
+
+    # Ensure RGB for vision model
+    if img.mode not in ("RGB", "RGBA"):
+        img = img.convert("RGB")
+
+    logging.info("🧠 Sending image to vision model for direct extraction...")
     try:
-        ocr_text = ocr_file(str(path))
+        llm_output = vision_analyze(img, LAB_REPORT_PROMPT)
     except Exception as e:
-        logging.error(f"OCR processing failed: {e}")
+        logging.error(f"Vision model analysis failed: {e}")
         raise
-    
-    if not ocr_text.strip():
-        raise ValueError("OCR produced no text. Check if the file is valid and readable.")
-    
-    logging.info("🧠 Sending to local LLM for structured analysis...")
-    try:
-        llm_output = analyze_with_llm(ocr_text)
-    except Exception as e:
-        logging.error(f"Local LLM analysis failed: {e}")
-        raise
-    
+
     tests = llm_output.get("tests", [])
+    logging.info(f"✅ Extracted {len(tests)} test result(s)")
+
     if not tests:
-        logging.warning("No test results found in the analysis")
-    
+        logging.warning("No test results found — check image quality or model output")
+
     # Enrich each test with PubMed research
     for t in tests:
         name = t.get("name", "")
@@ -181,9 +153,10 @@ def analyze_labreport(path):
         except Exception as e:
             logging.warning(f"PubMed lookup failed for {name}: {e}")
             t["pubmed_support"] = []
-    
+
     logging.info("\n===== Health Risk Analysis =====")
     return llm_output
+
 
 # ---------- RUN ----------
 if __name__ == "__main__":
@@ -194,18 +167,19 @@ if __name__ == "__main__":
             print("  python hrisk.py lab_results.pdf")
             print("\nSupported formats: PDF, PNG, JPG, TIFF")
             sys.exit(1)
-            
-        analyze_labreport(sys.argv[1])
+
+        result = analyze_labreport(sys.argv[1])
+        print(json.dumps(result, indent=2))
         sys.exit(0)
-        
+
     except FileNotFoundError as e:
         logging.error(f"Error: {e}")
         sys.exit(2)
     except ValueError as e:
         logging.error(f"Error: {e}")
         sys.exit(3)
-    except EnvironmentError as e:
-        logging.error(f"Environment Error: {e}")
+    except RuntimeError as e:
+        logging.error(f"Vision model error: {e}")
         sys.exit(4)
     except Exception as e:
         logging.error(f"Unexpected error: {e}")

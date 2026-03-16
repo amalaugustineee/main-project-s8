@@ -586,13 +586,13 @@
                 const color = PARAM_COLORS[i % PARAM_COLORS.length];
                 const raw = paramDataCache[param];
                 const entries = Array.isArray(raw) ? raw : (raw?.history || raw?.data || []);
-                const points = entries.map(e => ({ x: e.timestamp ? e.timestamp.split('T')[0] : null, y: parseFloat(e.value) }))
+                const points = entries.map(e => ({ x: e.timestamp ? e.timestamp : null, y: parseFloat(e.value) }))
                     .filter(p => p.x && !isNaN(p.y))
                     .sort((a, b) => new Date(a.x) - new Date(b.x));
 
                 return {
                     label: param,
-                    data: points.length > 0 ? points : [{ x: new Date().toISOString().split('T')[0], y: 0 }],
+                    data: points.length > 0 ? points : [{ x: new Date().toISOString(), y: 0 }],
                     borderColor: color,
                     backgroundColor: color + '15',
                     borderWidth: 3,
@@ -632,9 +632,9 @@
                     scales: {
                         x: useDateAxis ? {
                             type: 'time',
-                            time: { unit: 'month', tooltipFormat: 'MMM d, yyyy', displayFormats: { month: 'MMM yyyy' } },
+                            time: { tooltipFormat: 'MMM d, yyyy h:mm a', displayFormats: { day: 'MMM d', hour: 'h:mm a', minute: 'h:mm a', second: 'h:mm a' } },
                             grid: { display: false },
-                            ticks: { font: { family: 'Satoshi' } }
+                            ticks: { source: 'data', autoSkip: true, maxRotation: 45, font: { family: 'Satoshi' } }
                         } : {
                             grid: { display: false },
                             ticks: { font: { family: 'Satoshi' } }

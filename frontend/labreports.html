@@ -472,6 +472,7 @@
         let currentAnalysis = null;
         let currentFile = null;
         let riskChartInst = null;
+        let activePollInterval = null;  // track active poll so we can clear on resume
 
         btnBrowse.addEventListener('click', () => fileInput.click());
         dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
@@ -501,11 +502,15 @@
             if (!currentFile) { alert('Please select a lab report file first.'); return; }
 
             btnAnalyze.disabled = true;
-            btnAnalyze.innerHTML = '<iconify-icon icon="lucide:loader-2" class="loading-spinner"></iconify-icon> Analyzing…';
+            btnAnalyze.innerHTML = '<iconify-icon icon="lucide:loader-2" class="loading-spinner"></iconify-icon> Uploading…';
 
             analysisResultSection.classList.remove('hidden');
             analysisLoading.classList.remove('hidden');
             analysisContent.classList.add('hidden');
+
+            // Update loading message
+            const loadingMsg = analysisLoading.querySelector('p');
+            if (loadingMsg) loadingMsg.textContent = 'Sending to AI — you can browse other pages while this runs…';
 
             setTimeout(() => analysisResultSection.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 
@@ -513,26 +518,85 @@
             fd.append('file', currentFile);
 
             try {
+                // Step 1: Submit — returns immediately with job_id
                 const res = await fetch(`${API_BASE}/healthrisk`, { method: 'POST', body: fd });
-                if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Analysis failed'); }
-                const data = await res.json();
-                currentAnalysis = data;
-                renderAnalysis(data);
-                // Auto-save to DB so it appears in Trends
-                await autoSaveReport(data);
+                if (!res.ok) { const e = await res.json(); throw new Error(e.detail || 'Upload failed'); }
+                const { job_id } = await res.json();
+
+                // Persist job_id so we can resume if user navigates away and comes back
+                localStorage.setItem('labReportJobId', job_id);
+
+                btnAnalyze.innerHTML = '<iconify-icon icon="lucide:loader-2" class="loading-spinner"></iconify-icon> Analyzing…';
+                startPolling(job_id);
+
             } catch (err) {
-                analysisLoading.classList.add('hidden');
-                analysisContent.classList.remove('hidden');
-                document.getElementById('riskBanner').innerHTML = `
-            <iconify-icon icon="lucide:alert-circle" class="text-3xl text-red-500"></iconify-icon>
-            <div><p class="font-bold text-red-700">Analysis Failed</p><p class="text-sm text-red-600">${err.message}</p></div>`;
-                document.getElementById('biomarkersTable').innerHTML = '';
-                document.getElementById('aiInsightsContent').innerHTML = '';
-            } finally {
-                btnAnalyze.disabled = false;
-                btnAnalyze.innerHTML = '<iconify-icon icon="lucide:sparkles"></iconify-icon> Analyze with AI';
+                showUploadError(err.message);
             }
         });
+
+        // ---- Polling helper (extracted so it can be called on page resume too) ----
+        function startPolling(job_id) {
+            if (activePollInterval) clearInterval(activePollInterval); // clear any stale poll
+
+            activePollInterval = setInterval(async () => {
+                try {
+                    const pollRes = await fetch(`${API_BASE}/jobs/${job_id}`);
+                    const job = await pollRes.json();
+
+                    if (job.status === 'done') {
+                        clearInterval(activePollInterval);
+                        activePollInterval = null;
+                        localStorage.removeItem('labReportJobId');
+                        currentAnalysis = job.result;
+                        renderAnalysis(job.result);
+                        await autoSaveReport(job.result);
+                        btnAnalyze.disabled = false;
+                        btnAnalyze.innerHTML = '<iconify-icon icon="lucide:sparkles"></iconify-icon> Analyze with AI';
+                    } else if (job.status === 'failed') {
+                        clearInterval(activePollInterval);
+                        activePollInterval = null;
+                        localStorage.removeItem('labReportJobId');
+                        throw new Error(job.error || 'Analysis failed on server');
+                    }
+                    // else: still processing — keep spinning
+                } catch (pollErr) {
+                    if (activePollInterval) clearInterval(activePollInterval);
+                    activePollInterval = null;
+                    localStorage.removeItem('labReportJobId');
+                    showUploadError(pollErr.message);
+                }
+            }, 3000);
+        }
+
+        function showUploadError(msg) {
+            analysisLoading.classList.add('hidden');
+            analysisContent.classList.remove('hidden');
+            document.getElementById('riskBanner').innerHTML = `
+                <iconify-icon icon="lucide:alert-circle" class="text-3xl text-red-500"></iconify-icon>
+                <div><p class="font-bold text-red-700">Analysis Failed</p><p class="text-sm text-red-600">${msg}</p></div>`;
+            document.getElementById('biomarkersTable').innerHTML = '';
+            document.getElementById('aiInsightsContent').innerHTML = '';
+            btnAnalyze.disabled = false;
+            btnAnalyze.innerHTML = '<iconify-icon icon="lucide:sparkles"></iconify-icon> Analyze with AI';
+        }
+
+        // ---- Resume polling after back navigation (bfcache restore or fresh load) ----
+        window.addEventListener('pageshow', (event) => {
+            const savedJobId = localStorage.getItem('labReportJobId');
+            if (!savedJobId) return; // no active job
+
+            // Show the analysis section with spinner
+            analysisResultSection.classList.remove('hidden');
+            analysisLoading.classList.remove('hidden');
+            analysisContent.classList.add('hidden');
+            const loadingMsg = analysisLoading.querySelector('p');
+            if (loadingMsg) loadingMsg.textContent = 'Analysis still running in background…';
+            btnAnalyze.disabled = true;
+            btnAnalyze.innerHTML = '<iconify-icon icon="lucide:loader-2" class="loading-spinner"></iconify-icon> Analyzing…';
+
+            startPolling(savedJobId);
+        });
+
 
         // Auto-save after every analysis (so it shows in trends)
         async function autoSaveReport(data) {
@@ -564,11 +628,24 @@
             analysisLoading.classList.add('hidden');
             analysisContent.classList.remove('hidden');
 
-            // The API returns: { summary, tests: [{name, current_value, safe_range, risk_percent, risk_reason, pubmed_support}] }
             const tests = data.tests || [];
+            const maxRisk = tests.length > 0 ? Math.max(...tests.map(t => t.risk_percent || 0)) : -1;
 
-            // Determine overall risk level from highest risk_percent
-            const maxRisk = tests.length > 0 ? Math.max(...tests.map(t => t.risk_percent || 0)) : 0;
+            // -1 means no tests found at all — show a specific warning, NOT "Normal Range"
+            if (maxRisk === -1) {
+                const riskBanner = document.getElementById('riskBanner');
+                riskBanner.style.cssText = 'background:#FEF3C7; border:1px solid #FDE68A;';
+                riskBanner.innerHTML = `
+                    <iconify-icon icon="lucide:scan-search" style="color:#92400E" class="text-4xl flex-shrink-0"></iconify-icon>
+                    <div>
+                        <p class="font-bold text-lg" style="color:#92400E">Could Not Read Lab Values</p>
+                        <p class="text-sm" style="color:#78350F">The AI could not detect test results in this image. Please ensure the image is a clear, readable lab report and try again.</p>
+                    </div>`;
+                document.getElementById('biomarkersTable').innerHTML = '';
+                document.getElementById('aiInsightsContent').innerHTML = '<p class="text-[#6D726D]">No biomarkers were detected. Try uploading a clearer scan of your lab report.</p>';
+                return;
+            }
+
             const overallRiskLevel = maxRisk >= 70 ? 'high' : maxRisk >= 40 ? 'borderline' : 'normal';
 
             const riskColors = {

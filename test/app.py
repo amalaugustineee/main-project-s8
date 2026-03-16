@@ -5,9 +5,34 @@ from pydantic import BaseModel
 import tempfile
 import os
 import json
+import threading
 from icalendar import Calendar, Event, vText
 import uuid
 from datetime import datetime, timedelta, date
+
+# ---------- BACKGROUND JOB STORE ----------
+# Holds analysis jobs: {job_id: {"status": "processing"|"done"|"failed", "result": {...}, "error": str}}
+_jobs: dict = {}
+_jobs_lock = threading.Lock()
+
+def _create_job() -> str:
+    """Create a new job entry and return its ID."""
+    job_id = str(uuid.uuid4())
+    with _jobs_lock:
+        _jobs[job_id] = {"status": "processing", "result": None, "error": None, "created_at": datetime.utcnow().isoformat()}
+    return job_id
+
+def _finish_job(job_id: str, result: dict):
+    with _jobs_lock:
+        if job_id in _jobs:
+            _jobs[job_id]["status"] = "done"
+            _jobs[job_id]["result"] = result
+
+def _fail_job(job_id: str, error: str):
+    with _jobs_lock:
+        if job_id in _jobs:
+            _jobs[job_id]["status"] = "failed"
+            _jobs[job_id]["error"] = error
 
 import chromadb
 import chromadb.utils.embedding_functions as embedding_functions
@@ -92,91 +117,73 @@ def get_prescription_history(session: Session = Depends(get_session)):
     return prescriptions 
 
 @app.post("/prescription")
-async def prescription_analysis(file: UploadFile = File(...), session: Session = Depends(get_session)):
+async def prescription_analysis(file: UploadFile = File(...)):
     """
-    Upload a prescription image/PDF, extract medicine details using Gemini, and save to DB.
+    Upload a prescription image/PDF.
+    Returns immediately with a job_id; analysis runs in background.
+    Poll GET /jobs/{job_id} for status and result.
     """
     path = save_temp_file(file)
-    try:
-        # Analyzed result is now a dict: {'doctor_name':..., 'hospital_name':..., 'medicines': [...]}
-        result = analyze_prescription(path)
-        
-        # --- Save to Time Series DB ---
-        try:
-            # Create Prescription Record
-            doc_name = result.get("doctor_name", "Unknown")
-            hosp_name = result.get("hospital_name", "Unknown")
-            pres = Prescription(hospital_name=hosp_name, doctor_name=doc_name)
-            
-            session.add(pres)
-            session.commit()
-            session.refresh(pres)
-            
-            # Create Medicine Records
-            meds = result.get("medicines", [])
-            if isinstance(meds, list):
-                for item in meds:
-                    pm = PrescriptionMedicine(
-                        prescription_id=pres.id,
-                        medicine_name=item.get("medicine", "Unknown"),
-                        frequency=item.get("frequency", ""),
-                        duration=str(item.get("days", "")),
-                        dosage="", # parsed if available
-                        timings=item.get("timings", "")
-                    )
-                    session.add(pm)
-                session.commit()
-                
-            # --- Schedule Reminders (Redis) ---
-                
-            # --- Schedule Reminders (Redis) ---
-            # Removed per user request
-            # await schedule_medicine_reminders(meds)
-            
-            # Add the DB ID to the response so the frontend can generate calendar exports
-            result["prescription_id"] = pres.id
-            
-        except Exception as db_e:
-            print(f"⚠️ Failed to save prescription to DB: {db_e}")
-            
-        # --- FEATURE 3: Smart Medication Interaction Checker ---
-        try:
-            # Fetch past prescriptions (last 3, excluding the current one)
-            recent_pres = session.exec(select(Prescription).where(Prescription.id != pres.id).order_by(Prescription.created_at.desc()).limit(3)).all()
-            
-            if recent_pres:
-                existing_meds = []
-                for rp in recent_pres:
-                    for m in rp.medicines:
-                        existing_meds.append(m.medicine_name)
-                
-                new_meds = [m.get("medicine", "") for m in result.get("medicines", [])]
-                
-                if existing_meds and new_meds:
-                    prompt = f"""
-You are a pharmacology AI. The patient is currently taking these medications: {', '.join(set(existing_meds))}.
-They were just prescribed these NEW medications: {', '.join(new_meds)}.
+    job_id = _create_job()
 
-Check for any severe or highly notable drug-drug interactions between the CURRENT and NEW medications.
+    def _run(path, job_id):
+        from database import get_session as _get_session
+        from sqlmodel import Session as _Session
+        from database import engine as _engine
+        try:
+            result = analyze_prescription(path)
 
-Return ONLY a JSON object (no markdown, no extra text) with this exact structure:
-{{
-  "has_interactions": true,
-  "warnings": ["Warning 1", "Warning 2"]
-}}
-If there are no notable interactions, return has_interactions as false and an empty list for warnings.
-"""
-                    interaction_res = llm_generate(prompt, json_mode=True)
-                    result["interactions"] = interaction_res
-        except Exception as interaction_e:
-            print(f"⚠️ Failed to check drug interactions: {interaction_e}")
-            
-        return JSONResponse(content=result)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Prescription analysis failed: {e}")
-    finally:
-        if os.path.exists(path):
-            os.remove(path)
+            # Save to DB
+            with _Session(_engine) as session:
+                try:
+                    doc_name = result.get("doctor_name", "Unknown")
+                    hosp_name = result.get("hospital_name", "Unknown")
+                    pres = Prescription(hospital_name=hosp_name, doctor_name=doc_name)
+                    session.add(pres)
+                    session.commit()
+                    session.refresh(pres)
+
+                    meds = result.get("medicines", [])
+                    if isinstance(meds, list):
+                        for item in meds:
+                            pm = PrescriptionMedicine(
+                                prescription_id=pres.id,
+                                medicine_name=item.get("medicine", "Unknown"),
+                                frequency=item.get("frequency", ""),
+                                duration=str(item.get("days", "")),
+                                dosage=item.get("dosage", ""),
+                                timings=item.get("timings", "")
+                            )
+                            session.add(pm)
+                        session.commit()
+
+                    result["prescription_id"] = pres.id
+
+                    # Drug interaction check
+                    recent_pres = session.exec(
+                        select(Prescription).where(Prescription.id != pres.id)
+                        .order_by(Prescription.created_at.desc()).limit(3)
+                    ).all()
+                    if recent_pres:
+                        existing_meds = [m.medicine_name for rp in recent_pres for m in rp.medicines]
+                        new_meds = [m.get("medicine", "") for m in result.get("medicines", [])]
+                        if existing_meds and new_meds:
+                            prompt = f"""You are a pharmacology AI. Current meds: {', '.join(set(existing_meds))}. New meds: {', '.join(new_meds)}.
+Check for drug-drug interactions. Return ONLY JSON: {{"has_interactions": true, "warnings": ["..."]}}. If none, has_interactions false."""
+                            result["interactions"] = llm_generate(prompt, json_mode=True)
+                except Exception as db_e:
+                    print(f"⚠️ DB save error: {db_e}")
+
+            _finish_job(job_id, result)
+        except Exception as e:
+            _fail_job(job_id, str(e))
+        finally:
+            if os.path.exists(path):
+                os.remove(path)
+
+    t = threading.Thread(target=_run, args=(path, job_id), daemon=True)
+    t.start()
+    return JSONResponse(content={"job_id": job_id, "status": "processing"})
 
 @app.get("/prescription/{pres_id}/calendar")
 def export_prescription_calendar(pres_id: int, session: Session = Depends(get_session)):
@@ -272,7 +279,7 @@ def health_summary(session: Session = Depends(get_session)):
     
     ### PATIENT HISTORY
     
-    **Lab Report History (Trends):**
+    **Lab Report History (Trends over time - evaluate ALL of them):**
     {lab_context}
     
     **Prescription History:**
@@ -282,11 +289,12 @@ def health_summary(session: Session = Depends(get_session)):
     1. **Current Status**: Summarize their health status. Are they improving? Deteriorating? specific conditions?
     2. **Risk Analysis**: Highlight any concerning trends (e.g. rising blood sugar, consistent high BP).
     3. **Action Plan**: Suggest immediate actions (e.g. "Consult Cardiologist") and lifestyle changes.
-    4. **Output Format**: Return **STRICT MARKDOWN**. 
+    4. **Graphs**: For the 2 most important tracking metrics found in the Lab Reports, append [GRAPH: Metric Name] at the very end of your response. (e.g., [GRAPH: Glucose], [GRAPH: Hematocrit]). Ensure you use the exact metric name from the lab report. Do not invent metrics. DO NOT wrap the graph tag in backticks or code blocks.
+    5. **Output Format**: Return **STRICT MARKDOWN**. 
        - Use `## Headings` for sections.
        - Use `**Bold**` for key terms.
        - Use `- Bullet points` for lists.
-       - Do NOT use plain text blocks. Structure everything clearly.
+       - NEVER use a markdown code block (```) to encapsulate the whole response. Write the markdown directly.
     """
     
     try:
@@ -301,26 +309,40 @@ def health_summary(session: Session = Depends(get_session)):
 @app.post("/healthrisk")
 async def health_risk_analysis(file: UploadFile = File(...)):
     """
-    Upload a lab report image/PDF and analyze health risks with PubMed enrichment.
+    Upload a lab report image/PDF.
+    Returns immediately with a job_id; analysis runs in background.
+    Poll GET /jobs/{job_id} for status and result.
     """
     path = save_temp_file(file)
-    try:
-        from tenacity import RetryError
+    job_id = _create_job()
+
+    def _run(path, job_id):
         try:
             result = analyze_labreport(path)
-            return JSONResponse(content=result)
-        except RetryError as re:
-             # Get the original exception
-             last_exc = re.last_attempt.exception()
-             return JSONResponse(
-                 status_code=500, 
-                 content={"detail": f"⚠️ AI Service Failure: {str(last_exc)}"}
-             )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Health-risk analysis failed: {e}")
-    finally:
-        if os.path.exists(path):
-            os.remove(path)
+            _finish_job(job_id, result)
+        except Exception as e:
+            _fail_job(job_id, str(e))
+        finally:
+            if os.path.exists(path):
+                os.remove(path)
+
+    t = threading.Thread(target=_run, args=(path, job_id), daemon=True)
+    t.start()
+    return JSONResponse(content={"job_id": job_id, "status": "processing"})
+
+
+# ---------- Job Polling Endpoint ----------
+@app.get("/jobs/{job_id}")
+def get_job_status(job_id: str):
+    """
+    Poll this endpoint for the result of a background analysis job.
+    Response: {"status": "processing"|"done"|"failed", "result": {...}|null, "error": str|null}
+    """
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+    return JSONResponse(content=job)
 
 
 # ---------- 3. Diet-Plan Endpoint ----------

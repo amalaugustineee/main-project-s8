@@ -1,16 +1,12 @@
-import os
 import sys
 import json
 import logging
 from pathlib import Path
 from pdf2image import convert_from_path
 from PIL import Image
-import pytesseract
-import shutil
-import re
 
-# Local LLM (replaces Google Gemini)
-from llm_local import llm_generate
+# Vision LLM — replaces Tesseract entirely
+from llm_local import vision_analyze
 
 # ---------- LOGGING ----------
 logging.basicConfig(
@@ -18,75 +14,47 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-# ---------- OCR ----------
-def ocr_file(path):
-    """
-    Perform OCR using Tesseract on image or PDF.
-    Supports: PDF, PNG, JPG, JPEG, TIFF.
-    """
-    ext = os.path.splitext(path)[1].lower()
+# ---------- VISION PROMPT ----------
+PRESCRIPTION_PROMPT = """You are an expert medical prescription reader.
+Look carefully at this prescription image and extract all information.
 
-    # On Windows, allow explicit Tesseract path
-    tcmd_env = os.getenv("TESSERACT_CMD")
-    if tcmd_env:
-        pytesseract.pytesseract.tesseract_cmd = tcmd_env
+Your task:
+1. Read every medicine name visible in the image — including handwritten text.
+   Use the correct standard pharmaceutical name (e.g. fix obvious misspellings).
+2. For each medicine, extract:
+   - Dosage strength (e.g. "500mg", "10mg") if visible
+   - Frequency in '1-0-1' format (morning-afternoon-night):
+       once daily      → "1-0-0"
+       twice daily     → "1-0-1"
+       three times/day → "1-1-1"
+       as needed / PRN → "PRN"
+   - Duration in days (integer) or "PRN" if as-needed
+   - Timing instruction (e.g. "After Food", "Empty Stomach", "Before Bed")
+3. Read the doctor name and hospital/clinic name if visible.
 
-    # If no Tesseract detected, try auto-detect
-    tcmd = getattr(pytesseract.pytesseract, "tesseract_cmd", None)
-    if not tcmd or not shutil.which(os.path.basename(tcmd)):
-        found = shutil.which("tesseract")
-        if found:
-            pytesseract.pytesseract.tesseract_cmd = found
-        else:
-            raise EnvironmentError(
-                "Tesseract not found. Install it and ensure it's on PATH, "
-                "or set TESSERACT_CMD to the full path to tesseract.exe."
-            )
+Return ONLY a JSON object with this exact structure:
+{
+  "doctor_name": "Dr. Name or Unknown",
+  "hospital_name": "Clinic name or Unknown",
+  "medicines": [
+    {
+      "medicine": "Medicine Name",
+      "dosage": "500mg or null",
+      "frequency": "1-0-1 or PRN",
+      "days": 5,
+      "timings": "After Food or null"
+    }
+  ]
+}
+"""
 
-    # OCR from PDF or image
-    if ext == ".pdf":
-        pages = convert_from_path(path, dpi=300)
-        text = ""
-        for page in pages:
-            text += pytesseract.image_to_string(page, lang="eng") + "\n"
-        return text
-    else:
-        img = Image.open(path)
-        return pytesseract.image_to_string(img, lang="eng")
-
-# ---------- LLM ANALYSIS ----------
-def analyze_prescription_with_llm(ocr_text):
-    """
-    Sends OCR text to the local LLM and asks for structured JSON of medicines, frequency, and duration.
-    """
-    prompt = (
-        "Extract prescription details from the following text. "
-        "Return a **single JSON object** with the following keys:\n"
-        "- 'doctor_name': Name of the doctor (or 'Unknown').\n"
-        "- 'hospital_name': Name of the hospital/clinic (or 'Unknown').\n"
-        "- 'medicines': A list of objects, each containing:\n"
-        "   - 'medicine': Name of the medicine.\n"
-        "   - 'frequency': Dosing frequency (e.g., '1-0-1').\n"
-        "   - 'days': Duration (number of days or 'PRN').\n"
-        "   - 'timings': Specific timing instructions (e.g., 'After Food', 'Empty Stomach', 'Night').\n\n"
-        "Return ONLY the JSON object, no extra text.\n\n"
-        f"Prescription text:\n{ocr_text}"
-    )
-
-    try:
-        parsed = llm_generate(prompt, json_mode=True)
-        return parsed
-    except json.JSONDecodeError as e:
-        logging.error(f"❌ Failed to parse LLM JSON output: {e}")
-        raise
-    except Exception as e:
-        logging.error(f"❌ Local LLM error: {e}")
-        raise
 
 # ---------- MAIN PIPELINE ----------
 def analyze_prescription(path):
     """
-    Main pipeline: OCR → Local LLM → JSON output
+    Vision pipeline: Image → Vision Model → structured JSON
+    Tesseract is not used. The vision model reads the image directly.
+    Supports: PDF, PNG, JPG, JPEG, TIFF.
     """
     path = Path(path)
     if not path.exists():
@@ -95,17 +63,30 @@ def analyze_prescription(path):
     if path.suffix.lower() not in [".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff"]:
         raise ValueError(f"Unsupported file type: {path.suffix}")
 
-    logging.info(f"📄 Reading prescription from: {path}")
-    ocr_text = ocr_file(str(path))
-    if not ocr_text.strip():
-        raise ValueError("OCR produced no readable text. Check file clarity.")
+    logging.info(f"📄 Analyzing prescription with vision model: {path}")
 
-    logging.info("🤖 Sending extracted text to local LLM for medicine extraction...")
-    result = analyze_prescription_with_llm(ocr_text)
+    # Load image(s)
+    if path.suffix.lower() == ".pdf":
+        pages = convert_from_path(str(path), dpi=200)
+        # For prescriptions, first page is almost always sufficient
+        # For multi-page, we analyze page 1 (or could iterate)
+        img = pages[0]
+        if len(pages) > 1:
+            logging.info(f"📄 PDF has {len(pages)} pages — analyzing page 1 (prescription page)")
+    else:
+        img = Image.open(str(path))
 
-    # Print and return JSON
+    # Ensure RGB for vision model
+    if img.mode not in ("RGB", "RGBA"):
+        img = img.convert("RGB")
+
+    logging.info("🔍 Sending image to vision model for direct extraction...")
+    result = vision_analyze(img, PRESCRIPTION_PROMPT)
+
+    logging.info(f"✅ Extracted {len(result.get('medicines', []))} medicine(s)")
     print(json.dumps(result, indent=2))
     return result
+
 
 # ---------- ENTRY POINT ----------
 if __name__ == "__main__":
@@ -125,8 +106,8 @@ if __name__ == "__main__":
     except ValueError as e:
         logging.error(f"Error: {e}")
         sys.exit(3)
-    except EnvironmentError as e:
-        logging.error(f"Environment Error: {e}")
+    except RuntimeError as e:
+        logging.error(f"Vision model error: {e}")
         sys.exit(4)
     except Exception as e:
         logging.error(f"Unexpected error: {e}")
