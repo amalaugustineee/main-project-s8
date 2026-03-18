@@ -25,7 +25,7 @@ Mediware is a locally-hosted, AI-powered health management web app. It analyzes 
 - **Backend**: FastAPI + Uvicorn
 - **Database**: SQLite via SQLModel
 - **Vector DB**: ChromaDB (for RAG / document search)
-- **AI / LLM**: Ollama with `llama3.2` (runs fully locally)
+- **AI / LLM**: Ollama with `qwen2.5vl` — handles both text generation & vision (runs fully locally)
 - **Embeddings**: `nomic-embed-text` via Ollama
 - **OCR**: Tesseract + Pytesseract
 - **Frontend**: Vanilla HTML, CSS, JavaScript
@@ -58,7 +58,7 @@ pip install -r requirements.txt
 ### 3. Pull required Ollama models
 
 ```bash
-ollama pull llama3.2
+ollama pull qwen2.5vl
 ollama pull nomic-embed-text
 ```
 
