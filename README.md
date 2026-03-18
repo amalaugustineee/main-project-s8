@@ -43,8 +43,8 @@ Mediware is a locally-hosted, AI-powered health management web app. It analyzes 
 ### 1. Clone the repo
 
 ```bash
-git clone https://github.com/amalaugustineee/second-review-.git
-cd second-review-
+git clone https://github.com/amalaugustineee/main-project-s8.git
+cd main-project-s8
 ```
 
 ### 2. Set up Python environment
@@ -106,6 +106,7 @@ mediware/
 │   ├── summary.html
 │   ├── healthrisk.html
 │   ├── app.js          # Main frontend logic
+│   ├── dashboard_integration.js
 │   └── styles.css
 ├── test/               # Backend
 │   ├── app.py          # FastAPI application (main entry point)
@@ -127,10 +128,11 @@ mediware/
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/prescription` | Analyze a prescription image/PDF |
+| `POST` | `/prescription` | Analyze a prescription image/PDF (returns job ID) |
 | `GET` | `/prescription/history` | Get all past prescriptions |
 | `GET` | `/prescription/{id}/calendar` | Download .ics medication calendar |
-| `POST` | `/healthrisk` | Analyze a lab report |
+| `POST` | `/healthrisk` | Analyze a lab report (returns job ID) |
+| `GET` | `/jobs/{job_id}` | Poll background job status |
 | `POST` | `/reports/save` | Save a health report to DB |
 | `GET` | `/reports/history` | Get all past health reports |
 | `GET` | `/trends` | Get available trend parameters |
