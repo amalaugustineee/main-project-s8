@@ -8,7 +8,7 @@ Mediware is a locally-hosted, AI-powered health management web app. It analyzes 
 
 | Feature | Description |
 |---|---|
-| 📋 **Prescription Analyzer** | Upload a prescription image/PDF → extracts medicines, dosage, frequency |
+| 📋 **Prescription Analyzer** | Upload a prescription image/PDF → passed directly to `qwen2.5vl` vision model to extract medicines, dosage, frequency |
 | 🔬 **Lab Report Analyzer** | Upload a lab report → health risk assessment with % risk per test |
 | 🥗 **Diet Plan Generator** | Generates personalized meal plans based on your health history |
 | 📈 **Health Trends** | Tracks lab values over time with interactive charts |
@@ -25,9 +25,8 @@ Mediware is a locally-hosted, AI-powered health management web app. It analyzes 
 - **Backend**: FastAPI + Uvicorn
 - **Database**: SQLite via SQLModel
 - **Vector DB**: ChromaDB (for RAG / document search)
-- **AI / LLM**: Ollama with `qwen2.5vl` — handles both text generation & vision (runs fully locally)
+- **AI / LLM**: Ollama with `qwen2.5vl` — handles both text generation & vision/OCR (runs fully locally)
 - **Embeddings**: `nomic-embed-text` via Ollama
-- **OCR**: Tesseract + Pytesseract
 - **Frontend**: Vanilla HTML, CSS, JavaScript
 
 ---
@@ -38,7 +37,6 @@ Mediware is a locally-hosted, AI-powered health management web app. It analyzes 
 
 - Python 3.10+
 - [Ollama](https://ollama.com/download) installed and running
-- Tesseract OCR installed (`brew install tesseract` on macOS)
 
 ### 1. Clone the repo
 
